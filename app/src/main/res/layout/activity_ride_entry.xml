@@ -257,6 +257,94 @@
             android:textSize="@dimen/text_body" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/rideWeatherRowContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_spacing"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ridePolicyContainer">
+
+        <LinearLayout
+            android:id="@+id/rideWeatherContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_card_surface"
+            android:orientation="vertical"
+            android:padding="@dimen/card_padding">
+
+            <TextView
+                android:id="@+id/rideWeatherTitleTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ride_weather_card_title"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_body_large"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/rideWeatherValueTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:text="@string/ride_weather_loading_value"
+                android:textColor="@color/text_primary"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/rideWeatherStatusTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/xs_spacing"
+                android:text="@string/ride_weather_loading_message"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_body" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rideWindContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/s_spacing"
+            android:layout_weight="1"
+            android:background="@drawable/bg_card_surface"
+            android:orientation="vertical"
+            android:padding="@dimen/card_padding">
+
+            <TextView
+                android:id="@+id/rideWindTitleTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ride_wind_card_title"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_body_large"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/rideWindValueTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:text="@string/ride_wind_loading_value"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/rideWindStatusTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/xs_spacing"
+                android:text="@string/ride_wind_loading_message"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_body" />
+        </LinearLayout>
+    </LinearLayout>
+
     <TextView
         android:id="@+id/rideFlowStatusTextView"
         android:layout_width="0dp"
@@ -267,6 +355,6 @@
         android:textSize="@dimen/text_body"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/ridePolicyContainer" />
+        app:layout_constraintTop_toBottomOf="@id/rideWeatherRowContainer" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
