@@ -16,5 +16,8 @@
     <dimen name="stroke_width">1dp</dimen>
     <dimen name="min_touch_target">48dp</dimen>
     <dimen name="ride_map_height">280dp</dimen>
+    <dimen name="ride_map_hud_height">420dp</dimen>
     <dimen name="ride_map_camera_padding">48dp</dimen>
+    <dimen name="hud_card_padding">12dp</dimen>
+    <dimen name="ride_hud_bottom_margin">56dp</dimen>
 </resources>
