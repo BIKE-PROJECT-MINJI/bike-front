@@ -4,3 +4,6 @@
 /app/build/
 /.idea/
 *.iml
+/app/.classpath
+/app/.project
+/app/.settings/
