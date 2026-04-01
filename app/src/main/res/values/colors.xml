@@ -10,4 +10,5 @@
     <color name="success_text">#FF027A48</color>
     <color name="info_text">#FF175CD3</color>
     <color name="banner_warning_background">#FFFEE4E2</color>
+    <color name="route_line">#FF175CD3</color>
 </resources>
