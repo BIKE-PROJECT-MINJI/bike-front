@@ -27,6 +27,8 @@ import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyUiMapper;
 import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyUiModel;
 import com.bikeprojectminji.bikefront.ridemap.CourseRoutePointsGateway;
 import com.bikeprojectminji.bikefront.ridemap.HttpCourseRoutePointsGateway;
+import com.bikeprojectminji.bikefront.speed.RideSpeedFormatter;
+import com.bikeprojectminji.bikefront.speed.RideSpeedUiState;
 
 import org.maplibre.android.MapLibre;
 import org.maplibre.android.camera.CameraPosition;
@@ -78,6 +80,8 @@ public class RideEntryActivity extends AppCompatActivity {
     private TextView rideFlowStatusTextView;
     private TextView rideMapStatusTextView;
     private TextView ridePolicyBannerTextView;
+    private TextView rideSpeedValueTextView;
+    private TextView rideSpeedMessageTextView;
     private TextView ridePolicyStateTextView;
     private TextView ridePolicyMessageTextView;
     private Button rideMyLocationButton;
@@ -94,6 +98,7 @@ public class RideEntryActivity extends AppCompatActivity {
     private boolean hasCenteredOnRoute;
     private boolean hasCenteredOnRouteWithLocation;
     private Location latestLocation;
+    private Location previousLocation;
     private List<CourseRoutePointsGateway.RoutePoint> currentRoutePoints = Collections.emptyList();
     private MapLibreMap rideMapLibreMap;
     private String currentMapMessage;
@@ -102,6 +107,7 @@ public class RideEntryActivity extends AppCompatActivity {
     private final RidePolicyEvaluationGateway ridePolicyEvaluationGateway = new HttpRidePolicyEvaluationGateway();
     private final RidePolicyUiMapper ridePolicyUiMapper = new RidePolicyUiMapper();
     private final CourseRoutePointsGateway courseRoutePointsGateway = new HttpCourseRoutePointsGateway();
+    private final RideSpeedFormatter rideSpeedFormatter = new RideSpeedFormatter();
 
     private final ActivityResultLauncher<String> locationPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(),
@@ -133,6 +139,8 @@ public class RideEntryActivity extends AppCompatActivity {
         rideFlowStatusTextView = findViewById(R.id.rideFlowStatusTextView);
         rideMapStatusTextView = findViewById(R.id.rideMapStatusTextView);
         ridePolicyBannerTextView = findViewById(R.id.ridePolicyBannerTextView);
+        rideSpeedValueTextView = findViewById(R.id.rideSpeedValueTextView);
+        rideSpeedMessageTextView = findViewById(R.id.rideSpeedMessageTextView);
         ridePolicyStateTextView = findViewById(R.id.ridePolicyStateTextView);
         ridePolicyMessageTextView = findViewById(R.id.ridePolicyMessageTextView);
         rideMyLocationButton = findViewById(R.id.rideMyLocationButton);
@@ -322,6 +330,7 @@ public class RideEntryActivity extends AppCompatActivity {
         }
 
         latestLocation = resolveBestLastKnownLocation();
+        renderSpeedCard();
         renderCurrentLocationOnMap();
         renderMapOverlays();
 
@@ -371,21 +380,35 @@ public class RideEntryActivity extends AppCompatActivity {
             }
 
             List<String> providers = locationManager.getProviders(true);
-            Location latestLocation = null;
+            Location newestLocation = null;
             for (String provider : providers) {
                 Location candidate = locationManager.getLastKnownLocation(provider);
                 if (candidate == null) {
                     continue;
                 }
-                if (latestLocation == null || candidate.getTime() > latestLocation.getTime()) {
-                    latestLocation = candidate;
+                if (newestLocation == null || candidate.getTime() > newestLocation.getTime()) {
+                    newestLocation = candidate;
                 }
             }
 
-            return latestLocation;
+            if (newestLocation != null && latestLocation != null && newestLocation != latestLocation) {
+                previousLocation = latestLocation;
+            }
+
+            return newestLocation;
         } catch (SecurityException exception) {
             renderPolicyError(getString(R.string.ride_policy_location_error_message));
             return null;
+        }
+    }
+
+    private void renderSpeedCard() {
+        RideSpeedUiState uiState = rideSpeedFormatter.format(latestLocation, previousLocation);
+        rideSpeedValueTextView.setText(uiState.getSpeedText());
+        if (uiState.getMessage() == null || uiState.getMessage().isBlank()) {
+            rideSpeedMessageTextView.setText(R.string.ride_speed_message_default);
+        } else {
+            rideSpeedMessageTextView.setText(uiState.getMessage());
         }
     }
 
