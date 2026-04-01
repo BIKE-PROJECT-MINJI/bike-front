@@ -30,6 +30,9 @@
     <string name="ride_map_route_loading_message">경로를 불러오는 중입니다.</string>
     <string name="ride_map_route_error_message">경로를 불러오지 못했습니다.</string>
     <string name="ride_map_route_empty_message">경로 정보가 없습니다.</string>
+    <string name="ride_speed_card_title">속도</string>
+    <string name="ride_speed_loading">--</string>
+    <string name="ride_speed_message_default">현재 속도를 표시합니다.</string>
     <string name="ride_policy_card_title">주행 정책</string>
     <string name="ride_policy_pending_label">판단 보류</string>
     <string name="ride_policy_error_label">정책 확인 실패</string>

@@ -176,7 +176,7 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/ridePolicyContainer"
+        android:id="@+id/rideSpeedContainer"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/section_spacing"
@@ -186,6 +186,47 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/ridePermissionContainer">
+
+        <TextView
+            android:id="@+id/rideSpeedTitleTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/ride_speed_card_title"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/text_body_large"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/rideSpeedValueTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/s_spacing"
+            android:text="@string/ride_speed_loading"
+            android:textColor="@color/text_primary"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/rideSpeedMessageTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/xs_spacing"
+            android:text="@string/ride_speed_message_default"
+            android:textColor="@color/text_secondary"
+            android:textSize="@dimen/text_body" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ridePolicyContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_spacing"
+        android:background="@drawable/bg_card_surface"
+        android:orientation="vertical"
+        android:padding="@dimen/card_padding"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rideSpeedContainer">
 
         <TextView
             android:id="@+id/ridePolicyTitleTextView"
