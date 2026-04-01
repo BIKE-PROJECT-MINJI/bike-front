@@ -24,6 +24,12 @@
     <string name="ride_location_status_title">위치 기반 기능 상태</string>
     <string name="ride_location_status_blocked">현재 위치 표시, 속도 계산, 주행 정책 판단, 이탈 경고, 위치 기반 날씨 조회는 권한 허용 전까지 차단됩니다.</string>
     <string name="ride_location_status_resumed">위치 권한이 허용되어 ride 흐름을 이어갈 수 있습니다.</string>
+    <string name="ride_my_location_button">내 위치</string>
+    <string name="ride_map_permission_blocked_message">위치 권한 허용 전까지 현재 위치를 지도에 표시할 수 없습니다.</string>
+    <string name="ride_map_location_loading_message">현재 위치를 확인하는 중입니다.</string>
+    <string name="ride_map_route_loading_message">경로를 불러오는 중입니다.</string>
+    <string name="ride_map_route_error_message">경로를 불러오지 못했습니다.</string>
+    <string name="ride_map_route_empty_message">경로 정보가 없습니다.</string>
     <string name="ride_policy_card_title">주행 정책</string>
     <string name="ride_policy_pending_label">판단 보류</string>
     <string name="ride_policy_error_label">정책 확인 실패</string>
