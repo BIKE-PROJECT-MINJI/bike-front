@@ -29,6 +29,8 @@ import com.bikeprojectminji.bikefront.ridemap.CourseRoutePointsGateway;
 import com.bikeprojectminji.bikefront.ridemap.HttpCourseRoutePointsGateway;
 import com.bikeprojectminji.bikefront.speed.RideSpeedFormatter;
 import com.bikeprojectminji.bikefront.speed.RideSpeedUiState;
+import com.bikeprojectminji.bikefront.weather.CurrentWeatherGateway;
+import com.bikeprojectminji.bikefront.weather.HttpCurrentWeatherGateway;
 
 import org.maplibre.android.MapLibre;
 import org.maplibre.android.camera.CameraPosition;
@@ -82,6 +84,10 @@ public class RideEntryActivity extends AppCompatActivity {
     private TextView ridePolicyBannerTextView;
     private TextView rideSpeedValueTextView;
     private TextView rideSpeedMessageTextView;
+    private TextView rideWeatherValueTextView;
+    private TextView rideWeatherStatusTextView;
+    private TextView rideWindValueTextView;
+    private TextView rideWindStatusTextView;
     private TextView ridePolicyStateTextView;
     private TextView ridePolicyMessageTextView;
     private Button rideMyLocationButton;
@@ -108,6 +114,7 @@ public class RideEntryActivity extends AppCompatActivity {
     private final RidePolicyUiMapper ridePolicyUiMapper = new RidePolicyUiMapper();
     private final CourseRoutePointsGateway courseRoutePointsGateway = new HttpCourseRoutePointsGateway();
     private final RideSpeedFormatter rideSpeedFormatter = new RideSpeedFormatter();
+    private final CurrentWeatherGateway currentWeatherGateway = new HttpCurrentWeatherGateway();
 
     private final ActivityResultLauncher<String> locationPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(),
@@ -141,6 +148,10 @@ public class RideEntryActivity extends AppCompatActivity {
         ridePolicyBannerTextView = findViewById(R.id.ridePolicyBannerTextView);
         rideSpeedValueTextView = findViewById(R.id.rideSpeedValueTextView);
         rideSpeedMessageTextView = findViewById(R.id.rideSpeedMessageTextView);
+        rideWeatherValueTextView = findViewById(R.id.rideWeatherValueTextView);
+        rideWeatherStatusTextView = findViewById(R.id.rideWeatherStatusTextView);
+        rideWindValueTextView = findViewById(R.id.rideWindValueTextView);
+        rideWindStatusTextView = findViewById(R.id.rideWindStatusTextView);
         ridePolicyStateTextView = findViewById(R.id.ridePolicyStateTextView);
         ridePolicyMessageTextView = findViewById(R.id.ridePolicyMessageTextView);
         rideMyLocationButton = findViewById(R.id.rideMyLocationButton);
@@ -331,6 +342,7 @@ public class RideEntryActivity extends AppCompatActivity {
 
         latestLocation = resolveBestLastKnownLocation();
         renderSpeedCard();
+        renderWeatherLoading();
         renderCurrentLocationOnMap();
         renderMapOverlays();
 
@@ -339,6 +351,7 @@ public class RideEntryActivity extends AppCompatActivity {
             return;
         }
 
+        refreshWeatherCard();
         evaluateRidePolicy(latestLocation, ridePhase);
     }
 
@@ -409,6 +422,93 @@ public class RideEntryActivity extends AppCompatActivity {
             rideSpeedMessageTextView.setText(R.string.ride_speed_message_default);
         } else {
             rideSpeedMessageTextView.setText(uiState.getMessage());
+        }
+    }
+
+    private void refreshWeatherCard() {
+        if (latestLocation == null) {
+            renderWeatherLoading();
+            return;
+        }
+
+        currentWeatherGateway.loadCurrent(latestLocation.getLatitude(), latestLocation.getLongitude(), new CurrentWeatherGateway.Callback() {
+            @Override
+            public void onSuccess(CurrentWeatherGateway.WeatherResult result) {
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                renderWeatherResult(result);
+            }
+
+            @Override
+            public void onEmpty() {
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                renderWeatherEmpty();
+            }
+
+            @Override
+            public void onFailure(String message) {
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                renderWeatherFailure(message);
+            }
+        });
+    }
+
+    private void renderWeatherLoading() {
+        rideWeatherValueTextView.setText(R.string.ride_weather_loading_value);
+        rideWeatherStatusTextView.setText(R.string.ride_weather_loading_message);
+        rideWindValueTextView.setText(R.string.ride_wind_loading_value);
+        rideWindStatusTextView.setText(R.string.ride_wind_loading_message);
+    }
+
+    private void renderWeatherEmpty() {
+        rideWeatherValueTextView.setText(R.string.ride_weather_empty_value);
+        rideWeatherStatusTextView.setText(R.string.ride_weather_empty_message);
+        rideWindValueTextView.setText(R.string.ride_wind_empty_value);
+        rideWindStatusTextView.setText(R.string.ride_wind_empty_message);
+    }
+
+    private void renderWeatherFailure(String message) {
+        rideWeatherValueTextView.setText(R.string.ride_weather_empty_value);
+        rideWeatherStatusTextView.setText(message == null || message.isBlank()
+                ? getString(R.string.ride_weather_empty_message)
+                : message);
+        rideWindValueTextView.setText(R.string.ride_wind_empty_value);
+        rideWindStatusTextView.setText(R.string.ride_wind_empty_message);
+    }
+
+    private void renderWeatherResult(CurrentWeatherGateway.WeatherResult result) {
+        if (result.getTemperatureC() == null) {
+            rideWeatherValueTextView.setText(R.string.ride_weather_empty_value);
+        } else {
+            rideWeatherValueTextView.setText(getString(R.string.ride_weather_temperature_format, result.getTemperatureC()));
+        }
+
+        if (result.isStale()) {
+            rideWeatherStatusTextView.setText(R.string.ride_weather_stale_message);
+        } else if (result.getSky() != null && !result.getSky().isBlank()) {
+            rideWeatherStatusTextView.setText(result.getSky());
+        } else {
+            rideWeatherStatusTextView.setText(R.string.ride_weather_message_default);
+        }
+
+        if (result.getWindSpeedKmh() == null) {
+            rideWindValueTextView.setText(R.string.ride_wind_empty_value);
+        } else {
+            String directionText = (result.getWindDirectionText() == null || result.getWindDirectionText().isBlank())
+                    ? getString(R.string.ride_wind_direction_unknown)
+                    : result.getWindDirectionText();
+            rideWindValueTextView.setText(getString(R.string.ride_wind_speed_format, directionText, result.getWindSpeedKmh()));
+        }
+
+        if (result.isStale()) {
+            rideWindStatusTextView.setText(R.string.ride_weather_stale_message);
+        } else {
+            rideWindStatusTextView.setText(R.string.ride_wind_message_default);
         }
     }
 
