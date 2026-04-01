@@ -92,9 +92,12 @@ public class RideEntryActivity extends AppCompatActivity {
     private boolean routeLoaded;
     private boolean routeLoadFailed;
     private boolean hasCenteredOnRoute;
+    private boolean hasCenteredOnRouteWithLocation;
     private Location latestLocation;
     private List<CourseRoutePointsGateway.RoutePoint> currentRoutePoints = Collections.emptyList();
     private MapLibreMap rideMapLibreMap;
+    private String currentMapMessage;
+    private String currentFlowMessage;
 
     private final RidePolicyEvaluationGateway ridePolicyEvaluationGateway = new HttpRidePolicyEvaluationGateway();
     private final RidePolicyUiMapper ridePolicyUiMapper = new RidePolicyUiMapper();
@@ -144,6 +147,7 @@ public class RideEntryActivity extends AppCompatActivity {
 
         rideMapView.getMapAsync(mapLibreMap -> {
             rideMapLibreMap = mapLibreMap;
+            rideMapLibreMap.addOnCameraIdleListener(this::updateMyLocationButtonVisibility);
             mapLibreMap.setStyle(AppConfig.MAP_STYLE_URL, style -> {
                 initializeMapStyle(style);
                 renderMapOverlays();
@@ -269,7 +273,7 @@ public class RideEntryActivity extends AppCompatActivity {
                 ridePermissionRetryButton.setEnabled(false);
                 ridePermissionRetryButton.setVisibility(View.VISIBLE);
                 ridePermissionSettingsButton.setVisibility(View.GONE);
-                rideFlowStatusTextView.setText(R.string.ride_permission_resuming_message);
+                currentFlowMessage = getString(R.string.ride_permission_resuming_message);
                 renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_loading_message));
                 break;
             case NEED_PERMISSION:
@@ -278,7 +282,7 @@ public class RideEntryActivity extends AppCompatActivity {
                 ridePermissionRetryButton.setEnabled(true);
                 ridePermissionRetryButton.setVisibility(View.VISIBLE);
                 ridePermissionSettingsButton.setVisibility(View.VISIBLE);
-                rideFlowStatusTextView.setText(R.string.ride_placeholder_message);
+                currentFlowMessage = getString(R.string.ride_placeholder_message);
                 renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_permission_blocked_message));
                 break;
             case DENIED:
@@ -287,7 +291,7 @@ public class RideEntryActivity extends AppCompatActivity {
                 ridePermissionRetryButton.setEnabled(true);
                 ridePermissionRetryButton.setVisibility(View.VISIBLE);
                 ridePermissionSettingsButton.setVisibility(View.VISIBLE);
-                rideFlowStatusTextView.setText(R.string.ride_placeholder_message);
+                currentFlowMessage = getString(R.string.ride_placeholder_message);
                 renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_permission_blocked_message));
                 break;
             case SETTINGS_REQUIRED:
@@ -296,7 +300,7 @@ public class RideEntryActivity extends AppCompatActivity {
                 ridePermissionRetryButton.setEnabled(true);
                 ridePermissionRetryButton.setVisibility(View.VISIBLE);
                 ridePermissionSettingsButton.setVisibility(View.VISIBLE);
-                rideFlowStatusTextView.setText(R.string.ride_placeholder_message);
+                currentFlowMessage = getString(R.string.ride_placeholder_message);
                 renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_permission_blocked_message));
                 break;
             case GRANTED:
@@ -304,9 +308,11 @@ public class RideEntryActivity extends AppCompatActivity {
                 ridePermissionBlockedFeaturesTextView.setText(R.string.ride_location_status_resumed);
                 ridePermissionRetryButton.setVisibility(View.GONE);
                 ridePermissionSettingsButton.setVisibility(View.GONE);
-                rideFlowStatusTextView.setText(R.string.ride_location_status_resumed);
+                currentFlowMessage = getString(R.string.ride_location_status_resumed);
                 break;
         }
+
+        syncGuidanceMessages();
     }
 
     private void refreshRidePolicy() {
@@ -498,7 +504,30 @@ public class RideEntryActivity extends AppCompatActivity {
     }
 
     private void centerCameraToRouteIfPossible() {
-        if (rideMapLibreMap == null || currentRoutePoints.isEmpty() || hasCenteredOnRoute) {
+        if (rideMapLibreMap == null || currentRoutePoints.isEmpty()) {
+            return;
+        }
+
+        if (latestLocation != null && !hasCenteredOnRouteWithLocation) {
+            LatLngBounds.Builder boundsBuilder = new LatLngBounds.Builder();
+            for (CourseRoutePointsGateway.RoutePoint point : currentRoutePoints) {
+                boundsBuilder.include(new LatLng(point.getLatitude(), point.getLongitude()));
+            }
+            boundsBuilder.include(new LatLng(latestLocation.getLatitude(), latestLocation.getLongitude()));
+            rideMapLibreMap.animateCamera(
+                    CameraUpdateFactory.newLatLngBounds(
+                            boundsBuilder.build(),
+                            getResources().getDimensionPixelSize(R.dimen.ride_map_camera_padding)
+                    )
+            );
+            hasCenteredOnRoute = true;
+            hasCenteredOnRouteWithLocation = true;
+            updateMyLocationButtonVisibility();
+            return;
+        }
+
+        if (hasCenteredOnRoute) {
+            updateMyLocationButtonVisibility();
             return;
         }
 
@@ -511,6 +540,7 @@ public class RideEntryActivity extends AppCompatActivity {
                             .build()
             ));
             hasCenteredOnRoute = true;
+            updateMyLocationButtonVisibility();
             return;
         }
 
@@ -525,6 +555,7 @@ public class RideEntryActivity extends AppCompatActivity {
                 )
         );
         hasCenteredOnRoute = true;
+        updateMyLocationButtonVisibility();
     }
 
     private void centerCameraOnCurrentLocation() {
@@ -538,43 +569,48 @@ public class RideEntryActivity extends AppCompatActivity {
                         .zoom(16d)
                         .build()
         ));
+        updateMyLocationButtonVisibility();
     }
 
     private void renderMapOverlays() {
         if (!hasLocationPermission()) {
-            rideMapStatusTextView.setVisibility(View.VISIBLE);
-            rideMapStatusTextView.setText(R.string.ride_map_permission_blocked_message);
+            currentMapMessage = getString(R.string.ride_map_permission_blocked_message);
             rideMyLocationButton.setVisibility(View.GONE);
+            syncGuidanceMessages();
             return;
         }
 
-        rideMyLocationButton.setVisibility(latestLocation == null ? View.GONE : View.VISIBLE);
-
         if (latestLocation == null) {
-            rideMapStatusTextView.setVisibility(View.VISIBLE);
-            rideMapStatusTextView.setText(R.string.ride_map_location_loading_message);
+            currentMapMessage = getString(R.string.ride_map_location_loading_message);
+            rideMyLocationButton.setVisibility(View.GONE);
+            syncGuidanceMessages();
             return;
         }
 
         if (!routeLoaded) {
-            rideMapStatusTextView.setVisibility(View.VISIBLE);
-            rideMapStatusTextView.setText(R.string.ride_map_route_loading_message);
+            currentMapMessage = getString(R.string.ride_map_route_loading_message);
+            updateMyLocationButtonVisibility();
+            syncGuidanceMessages();
             return;
         }
 
         if (routeLoadFailed) {
-            rideMapStatusTextView.setVisibility(View.VISIBLE);
-            rideMapStatusTextView.setText(R.string.ride_map_route_error_message);
+            currentMapMessage = getString(R.string.ride_map_route_error_message);
+            updateMyLocationButtonVisibility();
+            syncGuidanceMessages();
             return;
         }
 
         if (currentRoutePoints.isEmpty()) {
-            rideMapStatusTextView.setVisibility(View.VISIBLE);
-            rideMapStatusTextView.setText(R.string.ride_map_route_empty_message);
+            currentMapMessage = getString(R.string.ride_map_route_empty_message);
+            updateMyLocationButtonVisibility();
+            syncGuidanceMessages();
             return;
         }
 
-        rideMapStatusTextView.setVisibility(View.GONE);
+        currentMapMessage = null;
+        updateMyLocationButtonVisibility();
+        syncGuidanceMessages();
     }
 
     private void renderPolicyPending(String stateLabel, String message) {
@@ -582,8 +618,8 @@ public class RideEntryActivity extends AppCompatActivity {
         ridePolicyStateTextView.setTextColor(ContextCompat.getColor(this, R.color.info_text));
         ridePolicyMessageTextView.setText(message);
         ridePolicyBannerTextView.setVisibility(View.GONE);
-        rideFlowStatusTextView.setVisibility(View.VISIBLE);
-        rideFlowStatusTextView.setText(message);
+        currentFlowMessage = message;
+        syncGuidanceMessages();
     }
 
     private void renderPolicyError(String message) {
@@ -591,8 +627,8 @@ public class RideEntryActivity extends AppCompatActivity {
         ridePolicyStateTextView.setTextColor(ContextCompat.getColor(this, R.color.error_text));
         ridePolicyMessageTextView.setText(message);
         ridePolicyBannerTextView.setVisibility(View.GONE);
-        rideFlowStatusTextView.setVisibility(View.VISIBLE);
-        rideFlowStatusTextView.setText(message);
+        currentFlowMessage = message;
+        syncGuidanceMessages();
     }
 
     private void renderPolicyResult(RidePolicyUiModel uiModel) {
@@ -605,12 +641,56 @@ public class RideEntryActivity extends AppCompatActivity {
             ridePolicyBannerTextView.setTextColor(ContextCompat.getColor(this, uiModel.getBannerTextColorResId()));
             ridePolicyBannerTextView.setBackgroundColor(ContextCompat.getColor(this, uiModel.getBannerBackgroundColorResId()));
             ridePolicyBannerTextView.setVisibility(View.VISIBLE);
-            rideFlowStatusTextView.setVisibility(View.GONE);
+            currentFlowMessage = null;
         } else {
             ridePolicyBannerTextView.setVisibility(View.GONE);
-            rideFlowStatusTextView.setVisibility(View.VISIBLE);
-            rideFlowStatusTextView.setText(uiModel.getMessage());
+            currentFlowMessage = uiModel.getMessage();
         }
+
+        syncGuidanceMessages();
+    }
+
+    private void syncGuidanceMessages() {
+        if (ridePolicyBannerTextView.getVisibility() == View.VISIBLE) {
+            rideMapStatusTextView.setVisibility(View.GONE);
+            rideFlowStatusTextView.setVisibility(View.GONE);
+            return;
+        }
+
+        if (currentMapMessage != null && !currentMapMessage.isBlank()) {
+            rideMapStatusTextView.setVisibility(View.VISIBLE);
+            rideMapStatusTextView.setText(currentMapMessage);
+            rideFlowStatusTextView.setVisibility(View.GONE);
+            return;
+        }
+
+        if (currentFlowMessage != null && !currentFlowMessage.isBlank()) {
+            rideFlowStatusTextView.setVisibility(View.VISIBLE);
+            rideFlowStatusTextView.setText(currentFlowMessage);
+            rideMapStatusTextView.setVisibility(View.GONE);
+            return;
+        }
+
+        rideMapStatusTextView.setVisibility(View.GONE);
+        rideFlowStatusTextView.setVisibility(View.GONE);
+    }
+
+    private void updateMyLocationButtonVisibility() {
+        if (rideMapLibreMap == null || latestLocation == null || !hasLocationPermission()) {
+            rideMyLocationButton.setVisibility(View.GONE);
+            return;
+        }
+
+        LatLng target = rideMapLibreMap.getCameraPosition().target;
+        float[] distance = new float[1];
+        Location.distanceBetween(
+                latestLocation.getLatitude(),
+                latestLocation.getLongitude(),
+                target.getLatitude(),
+                target.getLongitude(),
+                distance
+        );
+        rideMyLocationButton.setVisibility(distance[0] > 30f ? View.VISIBLE : View.GONE);
     }
 
     private void openAppSettings() {
