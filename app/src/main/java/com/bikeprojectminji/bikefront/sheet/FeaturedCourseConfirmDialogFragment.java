@@ -107,7 +107,7 @@ public class FeaturedCourseConfirmDialogFragment extends DialogFragment {
 
         courseDetailGateway.loadCourseDetail(course.getId(), new CourseDetailGateway.Callback() {
             @Override
-            public void onSuccess(CourseDetail courseDetailResponse) {
+            public void onSuccess(CourseDetailGateway.CourseDetail courseDetailResponse) {
                 if (!isAdded()) {
                     return;
                 }
