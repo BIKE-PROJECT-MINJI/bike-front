@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -68,6 +69,12 @@ public class RideEntryActivity extends AppCompatActivity {
     private static final String ROUTE_LAYER_ID = "ride_route_layer";
     private static final String LOCATION_SOURCE_ID = "ride_location_source";
     private static final String LOCATION_LAYER_ID = "ride_location_layer";
+    private static final long LOCATION_UPDATE_INTERVAL_MS = 2_000L;
+    private static final float LOCATION_UPDATE_DISTANCE_M = 5f;
+    private static final long ACTIVE_POLICY_REEVALUATION_INTERVAL_MS = 6_000L;
+    private static final float ACTIVE_POLICY_REEVALUATION_DISTANCE_M = 15f;
+    private static final long WEATHER_REFRESH_INTERVAL_MS = 300_000L;
+    private static final float WEATHER_REFRESH_DISTANCE_M = 1_000f;
 
     private enum PermissionUiState {
         REQUESTING,
@@ -103,18 +110,32 @@ public class RideEntryActivity extends AppCompatActivity {
     private boolean routeLoadFailed;
     private boolean hasCenteredOnRoute;
     private boolean hasCenteredOnRouteWithLocation;
+    private boolean locationUpdatesRegistered;
+    private boolean policyRequestInFlight;
+    private boolean weatherRequestInFlight;
     private Location latestLocation;
     private Location previousLocation;
+    private Location lastPolicyEvaluationLocation;
+    private Location lastWeatherRefreshLocation;
     private List<CourseRoutePointsGateway.RoutePoint> currentRoutePoints = Collections.emptyList();
     private MapLibreMap rideMapLibreMap;
     private String currentMapMessage;
     private String currentFlowMessage;
+    private long lastPolicyEvaluationAtMillis;
+    private long lastWeatherRefreshAtMillis;
 
     private final RidePolicyEvaluationGateway ridePolicyEvaluationGateway = new HttpRidePolicyEvaluationGateway();
     private final RidePolicyUiMapper ridePolicyUiMapper = new RidePolicyUiMapper();
     private final CourseRoutePointsGateway courseRoutePointsGateway = new HttpCourseRoutePointsGateway();
     private final RideSpeedFormatter rideSpeedFormatter = new RideSpeedFormatter();
     private final CurrentWeatherGateway currentWeatherGateway = new HttpCurrentWeatherGateway();
+    private final LocationListener foregroundLocationListener = location -> {
+        if (location == null || isFinishing() || isDestroyed()) {
+            return;
+        }
+
+        handleResolvedLocation(location, true, false);
+    };
 
     private final ActivityResultLauncher<String> locationPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(),
@@ -205,6 +226,10 @@ public class RideEntryActivity extends AppCompatActivity {
         super.onResume();
         rideMapView.onResume();
 
+        if (hasLocationPermission()) {
+            startForegroundLocationUpdates();
+        }
+
         if (openedSettings) {
             openedSettings = false;
             if (hasLocationPermission()) {
@@ -231,6 +256,7 @@ public class RideEntryActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        stopForegroundLocationUpdates();
         rideMapView.onPause();
         super.onPause();
     }
@@ -255,6 +281,7 @@ public class RideEntryActivity extends AppCompatActivity {
 
     private void requestLocationPermission() {
         if (hasLocationPermission()) {
+            startForegroundLocationUpdates();
             resumeRideFlow();
             return;
         }
@@ -265,9 +292,12 @@ public class RideEntryActivity extends AppCompatActivity {
 
     private void handleLocationPermissionResult(boolean granted) {
         if (granted) {
+            startForegroundLocationUpdates();
             resumeRideFlow();
             return;
         }
+
+        stopForegroundLocationUpdates();
 
         if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
             renderPermissionState(PermissionUiState.DENIED);
@@ -279,7 +309,17 @@ public class RideEntryActivity extends AppCompatActivity {
 
     private void resumeRideFlow() {
         renderPermissionState(PermissionUiState.GRANTED);
-        refreshRidePolicy();
+        Location seedLocation = resolveBestLastKnownLocation();
+        if (seedLocation != null) {
+            handleResolvedLocation(seedLocation, true, true);
+            return;
+        }
+
+        renderSpeedCard();
+        renderWeatherLoading();
+        renderCurrentLocationOnMap();
+        renderMapOverlays();
+        renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_loading_message));
     }
 
     private void renderPermissionState(PermissionUiState newState) {
@@ -334,39 +374,59 @@ public class RideEntryActivity extends AppCompatActivity {
         syncGuidanceMessages();
     }
 
-    private void refreshRidePolicy() {
+    private void handleResolvedLocation(Location location, boolean allowPreStartEvaluation, boolean forceWeatherRefresh) {
+        if (location == null) {
+            return;
+        }
+
+        if (latestLocation != null && latestLocation.getTime() != location.getTime()) {
+            previousLocation = latestLocation;
+        }
+
+        latestLocation = location;
+        renderSpeedCard();
+        renderCurrentLocationOnMap();
+        centerCameraToRouteIfPossible();
+        renderMapOverlays();
+
+        if (PHASE_ACTIVE.equals(ridePhase)) {
+            maybeEvaluateActivePolicy(location);
+        } else if (allowPreStartEvaluation) {
+            evaluateRidePolicy(location, ridePhase, true);
+        }
+
+        maybeRefreshWeather(location, forceWeatherRefresh);
+    }
+
+    private void evaluateRidePolicy(Location location, String phase, boolean force) {
         if (courseId <= 0) {
             renderPolicyError(getString(R.string.ride_policy_missing_course_message));
             return;
         }
 
-        latestLocation = resolveBestLastKnownLocation();
-        renderSpeedCard();
-        renderWeatherLoading();
-        renderCurrentLocationOnMap();
-        renderMapOverlays();
-
-        if (latestLocation == null) {
-            renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_loading_message));
+        if (policyRequestInFlight) {
             return;
         }
 
-        refreshWeatherCard();
-        evaluateRidePolicy(latestLocation, ridePhase);
-    }
+        if (!force && PHASE_ACTIVE.equals(phase) && !shouldReevaluateActivePolicy(location)) {
+            return;
+        }
 
-    private void evaluateRidePolicy(Location location, String phase) {
+        policyRequestInFlight = true;
+        lastPolicyEvaluationAtMillis = System.currentTimeMillis();
+        lastPolicyEvaluationLocation = new Location(location);
         renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_loading_message));
         ridePolicyEvaluationGateway.evaluate(courseId, phase, location, new RidePolicyEvaluationGateway.Callback() {
             @Override
             public void onSuccess(RidePolicyEvaluationGateway.EvaluationResult result) {
+                policyRequestInFlight = false;
                 if (isFinishing() || isDestroyed()) {
                     return;
                 }
 
                 if (PHASE_PRE_START.equals(phase) && "ELIGIBLE".equals(result.getStartGate().getStatus())) {
                     ridePhase = PHASE_ACTIVE;
-                    evaluateRidePolicy(location, PHASE_ACTIVE);
+                    evaluateRidePolicy(location, PHASE_ACTIVE, true);
                     return;
                 }
 
@@ -376,6 +436,7 @@ public class RideEntryActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(String message) {
+                policyRequestInFlight = false;
                 if (isFinishing() || isDestroyed()) {
                     return;
                 }
@@ -383,6 +444,23 @@ public class RideEntryActivity extends AppCompatActivity {
                 renderPolicyError(message);
             }
         });
+    }
+
+    private boolean shouldReevaluateActivePolicy(Location location) {
+        if (lastPolicyEvaluationLocation == null || lastPolicyEvaluationAtMillis == 0L) {
+            return true;
+        }
+
+        long elapsedMillis = System.currentTimeMillis() - lastPolicyEvaluationAtMillis;
+        if (elapsedMillis >= ACTIVE_POLICY_REEVALUATION_INTERVAL_MS) {
+            return true;
+        }
+
+        return location.distanceTo(lastPolicyEvaluationLocation) >= ACTIVE_POLICY_REEVALUATION_DISTANCE_M;
+    }
+
+    private void maybeEvaluateActivePolicy(Location location) {
+        evaluateRidePolicy(location, PHASE_ACTIVE, false);
     }
 
     private Location resolveBestLastKnownLocation() {
@@ -404,10 +482,6 @@ public class RideEntryActivity extends AppCompatActivity {
                 }
             }
 
-            if (newestLocation != null && latestLocation != null && newestLocation != latestLocation) {
-                previousLocation = latestLocation;
-            }
-
             return newestLocation;
         } catch (SecurityException exception) {
             renderPolicyError(getString(R.string.ride_policy_location_error_message));
@@ -425,15 +499,28 @@ public class RideEntryActivity extends AppCompatActivity {
         }
     }
 
-    private void refreshWeatherCard() {
-        if (latestLocation == null) {
+    private void maybeRefreshWeather(Location location, boolean force) {
+        if (location == null) {
             renderWeatherLoading();
             return;
         }
 
-        currentWeatherGateway.loadCurrent(latestLocation.getLatitude(), latestLocation.getLongitude(), new CurrentWeatherGateway.Callback() {
+        if (weatherRequestInFlight) {
+            return;
+        }
+
+        if (!force && !shouldRefreshWeather(location)) {
+            return;
+        }
+
+        weatherRequestInFlight = true;
+        lastWeatherRefreshAtMillis = System.currentTimeMillis();
+        lastWeatherRefreshLocation = new Location(location);
+
+        currentWeatherGateway.loadCurrent(location.getLatitude(), location.getLongitude(), new CurrentWeatherGateway.Callback() {
             @Override
             public void onSuccess(CurrentWeatherGateway.WeatherResult result) {
+                weatherRequestInFlight = false;
                 if (isFinishing() || isDestroyed()) {
                     return;
                 }
@@ -442,6 +529,7 @@ public class RideEntryActivity extends AppCompatActivity {
 
             @Override
             public void onEmpty() {
+                weatherRequestInFlight = false;
                 if (isFinishing() || isDestroyed()) {
                     return;
                 }
@@ -450,12 +538,26 @@ public class RideEntryActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(String message) {
+                weatherRequestInFlight = false;
                 if (isFinishing() || isDestroyed()) {
                     return;
                 }
                 renderWeatherFailure(message);
             }
         });
+    }
+
+    private boolean shouldRefreshWeather(Location location) {
+        if (lastWeatherRefreshLocation == null || lastWeatherRefreshAtMillis == 0L) {
+            return true;
+        }
+
+        long elapsedMillis = System.currentTimeMillis() - lastWeatherRefreshAtMillis;
+        if (elapsedMillis >= WEATHER_REFRESH_INTERVAL_MS) {
+            return true;
+        }
+
+        return location.distanceTo(lastWeatherRefreshLocation) >= WEATHER_REFRESH_DISTANCE_M;
     }
 
     private void renderWeatherLoading() {
@@ -821,6 +923,55 @@ public class RideEntryActivity extends AppCompatActivity {
         Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
         intent.setData(Uri.fromParts("package", getPackageName(), null));
         startActivity(intent);
+    }
+
+    private void startForegroundLocationUpdates() {
+        if (locationUpdatesRegistered || !hasLocationPermission()) {
+            return;
+        }
+
+        try {
+            LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            if (locationManager == null) {
+                return;
+            }
+
+            registerProviderUpdates(locationManager, LocationManager.GPS_PROVIDER);
+            registerProviderUpdates(locationManager, LocationManager.NETWORK_PROVIDER);
+            locationUpdatesRegistered = true;
+        } catch (SecurityException ignored) {
+            locationUpdatesRegistered = false;
+        }
+    }
+
+    private void registerProviderUpdates(LocationManager locationManager, String provider) {
+        if (!locationManager.isProviderEnabled(provider)) {
+            return;
+        }
+
+        locationManager.requestLocationUpdates(
+                provider,
+                LOCATION_UPDATE_INTERVAL_MS,
+                LOCATION_UPDATE_DISTANCE_M,
+                foregroundLocationListener,
+                getMainLooper()
+        );
+    }
+
+    private void stopForegroundLocationUpdates() {
+        if (!locationUpdatesRegistered) {
+            return;
+        }
+
+        try {
+            LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            if (locationManager != null) {
+                locationManager.removeUpdates(foregroundLocationListener);
+            }
+        } catch (SecurityException ignored) {
+        } finally {
+            locationUpdatesRegistered = false;
+        }
     }
 
     private boolean hasLocationPermission() {
