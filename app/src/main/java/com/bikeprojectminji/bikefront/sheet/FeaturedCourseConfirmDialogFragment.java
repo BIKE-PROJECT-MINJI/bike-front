@@ -97,6 +97,7 @@ public class FeaturedCourseConfirmDialogFragment extends DialogFragment {
             startButton.setEnabled(false);
             Intent intent = RideEntryActivity.newIntent(
                     requireContext(),
+                    courseDetail.getId(),
                     courseDetail.getTitle(),
                     formatDistance(courseDetail.getDistanceKm()),
                     getString(R.string.featured_course_duration_format, courseDetail.getEstimatedDurationMin())
