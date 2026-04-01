@@ -127,6 +127,61 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/ridePolicyBannerTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_spacing"
+        android:background="@color/banner_warning_background"
+        android:padding="@dimen/card_padding"
+        android:textColor="@color/error_text"
+        android:textSize="@dimen/text_body"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ridePermissionContainer" />
+
+    <LinearLayout
+        android:id="@+id/ridePolicyContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_spacing"
+        android:background="@drawable/bg_card_surface"
+        android:orientation="vertical"
+        android:padding="@dimen/card_padding"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ridePolicyBannerTextView">
+
+        <TextView
+            android:id="@+id/ridePolicyTitleTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/ride_policy_card_title"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/text_body_large"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/ridePolicyStateTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/s_spacing"
+            android:text="@string/ride_policy_pending_label"
+            android:textColor="@color/info_text"
+            android:textSize="@dimen/text_body_large"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/ridePolicyMessageTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/xs_spacing"
+            android:text="@string/ride_policy_loading_message"
+            android:textColor="@color/text_secondary"
+            android:textSize="@dimen/text_body" />
+    </LinearLayout>
+
+    <TextView
         android:id="@+id/rideFlowStatusTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -136,6 +191,6 @@
         android:textSize="@dimen/text_body"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/ridePermissionContainer" />
+        app:layout_constraintTop_toBottomOf="@id/ridePolicyContainer" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
