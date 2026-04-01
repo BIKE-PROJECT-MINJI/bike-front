@@ -64,4 +64,78 @@
             android:textSize="@dimen/text_body" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/ridePermissionContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_spacing"
+        android:background="@drawable/bg_item_surface"
+        android:orientation="vertical"
+        android:padding="@dimen/card_padding"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rideSummaryContainer">
+
+        <TextView
+            android:id="@+id/ridePermissionTitleTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/ride_location_status_title"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/text_body_large"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/ridePermissionMessageTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/s_spacing"
+            android:textColor="@color/text_secondary"
+            android:textSize="@dimen/text_body" />
+
+        <TextView
+            android:id="@+id/ridePermissionBlockedFeaturesTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/section_spacing"
+            android:text="@string/ride_location_status_blocked"
+            android:textColor="@color/text_secondary"
+            android:textSize="@dimen/text_body" />
+
+        <LinearLayout
+            android:id="@+id/ridePermissionActionContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/section_spacing"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/ridePermissionRetryButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/ride_permission_retry_button" />
+
+            <Button
+                android:id="@+id/ridePermissionSettingsButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/s_spacing"
+                android:layout_weight="1"
+                android:text="@string/ride_permission_settings_button" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/rideFlowStatusTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_spacing"
+        android:text="@string/ride_placeholder_message"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/text_body"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ridePermissionContainer" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
