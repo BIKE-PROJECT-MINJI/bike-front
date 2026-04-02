@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/screen_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/screen_padding">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/auth_profile_title"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/text_title"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/authReasonTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/s_spacing"
+            android:textColor="@color/text_secondary"
+            android:textSize="@dimen/text_body" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/section_spacing"
+            android:background="@drawable/bg_card_surface"
+            android:orientation="vertical"
+            android:padding="@dimen/card_padding">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/auth_profile_email_label"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_body"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/authEmailEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:autofillHints="emailAddress"
+                android:background="@drawable/bg_item_surface"
+                android:hint="@string/auth_profile_email_hint"
+                android:inputType="textEmailAddress"
+                android:minHeight="@dimen/min_touch_target"
+                android:padding="@dimen/card_padding"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_spacing"
+                android:text="@string/auth_profile_password_label"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_body"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/authPasswordEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:autofillHints="password"
+                android:background="@drawable/bg_item_surface"
+                android:hint="@string/auth_profile_password_hint"
+                android:inputType="textPassword"
+                android:minHeight="@dimen/min_touch_target"
+                android:padding="@dimen/card_padding"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_spacing"
+                android:text="@string/auth_profile_name_label"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_body"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/authDisplayNameEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:background="@drawable/bg_item_surface"
+                android:hint="@string/auth_profile_name_hint"
+                android:minHeight="@dimen/min_touch_target"
+                android:padding="@dimen/card_padding"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary" />
+
+            <TextView
+                android:id="@+id/authStatusTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:textColor="@color/error_text"
+                android:textSize="@dimen/text_body_small"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/authProgressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="@dimen/section_spacing"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/authContinueButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_spacing"
+                android:text="@string/auth_profile_continue_button" />
+
+            <Button
+                android:id="@+id/authLoginButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:text="@string/auth_profile_login_button" />
+
+            <Button
+                android:id="@+id/authLaterButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:text="@string/auth_profile_later_button" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
