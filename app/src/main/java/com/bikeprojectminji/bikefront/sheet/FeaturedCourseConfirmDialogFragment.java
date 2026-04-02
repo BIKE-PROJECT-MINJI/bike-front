@@ -73,6 +73,10 @@ public class FeaturedCourseConfirmDialogFragment extends DialogFragment {
         TextView titleTextView = view.findViewById(R.id.confirmSheetTitleTextView);
         TextView distanceTextView = view.findViewById(R.id.confirmSheetDistanceTextView);
         TextView durationTextView = view.findViewById(R.id.confirmSheetDurationTextView);
+        TextView primaryHintTextView = view.findViewById(R.id.confirmSheetPrimaryHintTextView);
+        TextView phase2HintTextView = view.findViewById(R.id.confirmSheetPhase2HintTextView);
+        TextView secondaryHintTextView = view.findViewById(R.id.confirmSheetSecondaryHintTextView);
+        TextView loginHintTextView = view.findViewById(R.id.confirmSheetLoginHintTextView);
         TextView errorTextView = view.findViewById(R.id.confirmSheetErrorTextView);
         ProgressBar progressBar = view.findViewById(R.id.confirmSheetProgressBar);
         Button startButton = view.findViewById(R.id.confirmSheetStartButton);
@@ -82,6 +86,10 @@ public class FeaturedCourseConfirmDialogFragment extends DialogFragment {
         titleTextView.setText(course.getTitle());
         distanceTextView.setText(formatDistance(course));
         durationTextView.setText(getString(R.string.featured_course_duration_format, course.getEstimatedDurationMin()));
+        primaryHintTextView.setText(R.string.confirm_sheet_primary_label);
+        phase2HintTextView.setText(R.string.confirm_sheet_phase2_hint);
+        secondaryHintTextView.setText(R.string.confirm_sheet_secondary_label);
+        loginHintTextView.setText(R.string.confirm_sheet_login_hint);
 
         startButton.setEnabled(false);
         errorTextView.setVisibility(View.GONE);

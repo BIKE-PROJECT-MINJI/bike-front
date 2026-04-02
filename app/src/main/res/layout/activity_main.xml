@@ -1,87 +1,138 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/screen_background"
-    android:padding="@dimen/screen_padding">
-
-    <TextView
-        android:id="@+id/homeTitleTextView"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="@string/home_title"
-        android:textColor="@color/text_primary"
-        android:textSize="@dimen/text_title"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    android:background="@color/screen_background">
 
     <LinearLayout
-        android:id="@+id/featuredSectionContainer"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginTop="@dimen/section_spacing"
-        android:background="@drawable/bg_card_surface"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/card_padding"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/homeTitleTextView">
+        android:padding="@dimen/screen_padding">
 
         <TextView
-            android:id="@+id/featuredSectionTitleTextView"
-            android:layout_width="wrap_content"
+            android:id="@+id/homeTitleTextView"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/featured_section_title"
+            android:text="@string/home_title"
             android:textColor="@color/text_primary"
-            android:textSize="@dimen/text_section_title"
+            android:textSize="@dimen/text_title"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/featuredSortingModeTextView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/xs_spacing"
-            android:textColor="@color/text_secondary"
-            android:textSize="@dimen/text_body_small"
-            android:visibility="gone" />
-
-        <ProgressBar
-            android:id="@+id/featuredProgressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="@dimen/section_spacing" />
-
-        <TextView
-            android:id="@+id/featuredStatusTextView"
+        <LinearLayout
+            android:id="@+id/homeIntroContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/section_spacing"
-            android:gravity="center"
-            android:textColor="@color/text_secondary"
-            android:textSize="@dimen/text_body"
-            android:visibility="gone" />
+            android:background="@drawable/bg_card_surface"
+            android:orientation="vertical"
+            android:padding="@dimen/card_padding">
 
-        <Button
-            android:id="@+id/featuredRetryButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/s_spacing"
-            android:text="@string/retry_button"
-            android:visibility="gone" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_item_surface"
+                android:paddingHorizontal="@dimen/s_spacing"
+                android:paddingVertical="@dimen/xs_spacing"
+                android:text="@string/home_phase2_badge"
+                android:textColor="@color/info_text"
+                android:textSize="@dimen/text_body_small"
+                android:textStyle="bold" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/featuredRecyclerView"
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:text="@string/home_intro_title"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_body_large"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:text="@string/home_intro_message"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_body" />
+
+            <Button
+                android:id="@+id/homeIntroActionButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_spacing"
+                android:text="@string/home_intro_action" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/featuredSectionContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/section_spacing"
-            android:clipToPadding="false"
-            android:nestedScrollingEnabled="false"
-            android:visibility="gone" />
+            android:background="@drawable/bg_card_surface"
+            android:orientation="vertical"
+            android:padding="@dimen/card_padding">
+
+            <TextView
+                android:id="@+id/featuredSectionTitleTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/featured_section_title"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_section_title"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/featuredSectionHintTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/xs_spacing"
+                android:text="@string/featured_section_hint"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_body" />
+
+            <TextView
+                android:id="@+id/featuredSortingModeTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/xs_spacing"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_body_small"
+                android:visibility="gone" />
+
+            <ProgressBar
+                android:id="@+id/featuredProgressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="@dimen/section_spacing" />
+
+            <TextView
+                android:id="@+id/featuredStatusTextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_spacing"
+                android:gravity="center"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_body"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/featuredRetryButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/s_spacing"
+                android:text="@string/retry_button"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/featuredRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_spacing"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:visibility="gone" />
+        </LinearLayout>
     </LinearLayout>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

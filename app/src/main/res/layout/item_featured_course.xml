@@ -28,6 +28,15 @@
         android:textSize="@dimen/text_body" />
 
     <TextView
+        android:id="@+id/featuredCourseHintTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/s_spacing"
+        android:text="@string/featured_course_item_hint"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/text_body_small" />
+
+    <TextView
         android:id="@+id/featuredCourseDurationTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
