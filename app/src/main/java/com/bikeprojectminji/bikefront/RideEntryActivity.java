@@ -89,6 +89,8 @@ public class RideEntryActivity extends AppCompatActivity {
     private TextView rideFlowStatusTextView;
     private TextView rideMapStatusTextView;
     private TextView ridePolicyBannerTextView;
+    private View rideSummaryContainer;
+    private View ridePermissionContainer;
     private TextView rideSpeedValueTextView;
     private TextView rideSpeedMessageTextView;
     private TextView rideWeatherValueTextView;
@@ -98,6 +100,7 @@ public class RideEntryActivity extends AppCompatActivity {
     private TextView ridePolicyStateTextView;
     private TextView ridePolicyMessageTextView;
     private Button rideMyLocationButton;
+    private Button rideStartButton;
     private Button ridePermissionRetryButton;
     private Button ridePermissionSettingsButton;
     private MapView rideMapView;
@@ -113,6 +116,7 @@ public class RideEntryActivity extends AppCompatActivity {
     private boolean locationUpdatesRegistered;
     private boolean policyRequestInFlight;
     private boolean weatherRequestInFlight;
+    private boolean startRequested;
     private Location latestLocation;
     private Location previousLocation;
     private Location lastPolicyEvaluationLocation;
@@ -159,6 +163,9 @@ public class RideEntryActivity extends AppCompatActivity {
 
         rideMapView = findViewById(R.id.rideMapView);
         rideMapView.onCreate(savedInstanceState);
+        TextView screenTitleTextView = findViewById(R.id.rideTitleTextView);
+        rideSummaryContainer = findViewById(R.id.rideSummaryContainer);
+        ridePermissionContainer = findViewById(R.id.ridePermissionContainer);
         TextView titleTextView = findViewById(R.id.rideCourseTitleTextView);
         TextView distanceTextView = findViewById(R.id.rideCourseDistanceTextView);
         TextView durationTextView = findViewById(R.id.rideCourseDurationTextView);
@@ -176,11 +183,13 @@ public class RideEntryActivity extends AppCompatActivity {
         ridePolicyStateTextView = findViewById(R.id.ridePolicyStateTextView);
         ridePolicyMessageTextView = findViewById(R.id.ridePolicyMessageTextView);
         rideMyLocationButton = findViewById(R.id.rideMyLocationButton);
+        rideStartButton = findViewById(R.id.rideStartButton);
         ridePermissionRetryButton = findViewById(R.id.ridePermissionRetryButton);
         ridePermissionSettingsButton = findViewById(R.id.ridePermissionSettingsButton);
 
         Intent intent = getIntent();
         courseId = intent.getLongExtra(EXTRA_COURSE_ID, -1L);
+        screenTitleTextView.setText(intent.getStringExtra(EXTRA_TITLE));
         titleTextView.setText(intent.getStringExtra(EXTRA_TITLE));
         distanceTextView.setText(intent.getStringExtra(EXTRA_DISTANCE_TEXT));
         durationTextView.setText(intent.getStringExtra(EXTRA_DURATION_TEXT));
@@ -198,6 +207,7 @@ public class RideEntryActivity extends AppCompatActivity {
             });
         });
 
+        rideStartButton.setOnClickListener(v -> requestRideStart());
         rideMyLocationButton.setOnClickListener(v -> centerCameraOnCurrentLocation());
         ridePermissionRetryButton.setOnClickListener(v -> requestLocationPermission());
         ridePermissionSettingsButton.setOnClickListener(v -> openAppSettings());
@@ -219,6 +229,8 @@ public class RideEntryActivity extends AppCompatActivity {
             renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_loading_message));
             requestLocationPermission();
         }
+
+        renderRideStartButton();
     }
 
     @Override
@@ -327,6 +339,7 @@ public class RideEntryActivity extends AppCompatActivity {
 
         switch (newState) {
             case REQUESTING:
+                ridePermissionContainer.setVisibility(View.VISIBLE);
                 ridePermissionMessageTextView.setText(R.string.ride_permission_resuming_message);
                 ridePermissionBlockedFeaturesTextView.setText(R.string.ride_location_status_blocked);
                 ridePermissionRetryButton.setEnabled(false);
@@ -336,6 +349,7 @@ public class RideEntryActivity extends AppCompatActivity {
                 renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_loading_message));
                 break;
             case NEED_PERMISSION:
+                ridePermissionContainer.setVisibility(View.VISIBLE);
                 ridePermissionMessageTextView.setText(R.string.ride_permission_message);
                 ridePermissionBlockedFeaturesTextView.setText(R.string.ride_location_status_blocked);
                 ridePermissionRetryButton.setEnabled(true);
@@ -345,6 +359,7 @@ public class RideEntryActivity extends AppCompatActivity {
                 renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_permission_blocked_message));
                 break;
             case DENIED:
+                ridePermissionContainer.setVisibility(View.VISIBLE);
                 ridePermissionMessageTextView.setText(R.string.ride_permission_message);
                 ridePermissionBlockedFeaturesTextView.setText(R.string.ride_location_status_blocked);
                 ridePermissionRetryButton.setEnabled(true);
@@ -354,6 +369,7 @@ public class RideEntryActivity extends AppCompatActivity {
                 renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_permission_blocked_message));
                 break;
             case SETTINGS_REQUIRED:
+                ridePermissionContainer.setVisibility(View.VISIBLE);
                 ridePermissionMessageTextView.setText(R.string.ride_permission_settings_message);
                 ridePermissionBlockedFeaturesTextView.setText(R.string.ride_location_status_blocked);
                 ridePermissionRetryButton.setEnabled(true);
@@ -363,6 +379,7 @@ public class RideEntryActivity extends AppCompatActivity {
                 renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_permission_blocked_message));
                 break;
             case GRANTED:
+                ridePermissionContainer.setVisibility(View.GONE);
                 ridePermissionMessageTextView.setText(R.string.ride_permission_resuming_message);
                 ridePermissionBlockedFeaturesTextView.setText(R.string.ride_location_status_resumed);
                 ridePermissionRetryButton.setVisibility(View.GONE);
@@ -371,6 +388,7 @@ public class RideEntryActivity extends AppCompatActivity {
                 break;
         }
 
+        renderRideStartButton();
         syncGuidanceMessages();
     }
 
@@ -425,12 +443,23 @@ public class RideEntryActivity extends AppCompatActivity {
                 }
 
                 if (PHASE_PRE_START.equals(phase) && "ELIGIBLE".equals(result.getStartGate().getStatus())) {
-                    ridePhase = PHASE_ACTIVE;
-                    evaluateRidePolicy(location, PHASE_ACTIVE, true);
+                    if (startRequested) {
+                        startRequested = false;
+                        ridePhase = PHASE_ACTIVE;
+                        renderRideStartButton();
+                        evaluateRidePolicy(location, PHASE_ACTIVE, true);
+                        return;
+                    }
+
+                    ridePhase = PHASE_PRE_START;
+                    renderRideStartButton();
+                    renderPolicyResult(ridePolicyUiMapper.map(result));
                     return;
                 }
 
                 ridePhase = result.getPhase();
+                startRequested = false;
+                renderRideStartButton();
                 renderPolicyResult(ridePolicyUiMapper.map(result));
             }
 
@@ -441,9 +470,32 @@ public class RideEntryActivity extends AppCompatActivity {
                     return;
                 }
 
+                startRequested = false;
+                renderRideStartButton();
                 renderPolicyError(message);
             }
         });
+    }
+
+    private void requestRideStart() {
+        if (latestLocation == null) {
+            renderPolicyPending(getString(R.string.ride_policy_pending_label), getString(R.string.ride_policy_loading_message));
+            return;
+        }
+
+        startRequested = true;
+        renderRideStartButton();
+        evaluateRidePolicy(latestLocation, PHASE_PRE_START, true);
+    }
+
+    private void renderRideStartButton() {
+        if (!hasLocationPermission() || PHASE_ACTIVE.equals(ridePhase)) {
+            rideStartButton.setVisibility(View.GONE);
+            return;
+        }
+
+        rideStartButton.setVisibility(View.VISIBLE);
+        rideStartButton.setEnabled(!startRequested);
     }
 
     private boolean shouldReevaluateActivePolicy(Location location) {
