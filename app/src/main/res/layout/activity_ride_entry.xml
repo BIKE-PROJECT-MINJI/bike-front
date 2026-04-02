@@ -127,6 +127,14 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/s_spacing"
                     android:text="@string/start_button" />
+
+                <Button
+                    android:id="@+id/rideFinishButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/s_spacing"
+                    android:text="@string/ride_finish_button"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <LinearLayout
@@ -370,5 +378,51 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/ridePermissionContainer" />
+
+    <LinearLayout
+        android:id="@+id/ridePostRideContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_spacing"
+        android:background="@drawable/bg_card_surface"
+        android:orientation="vertical"
+        android:padding="@dimen/card_padding"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rideFlowStatusTextView">
+
+        <TextView
+            android:id="@+id/ridePostRideTitleTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/ride_finish_summary_title"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/text_body_large"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/ridePostRideMessageTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/s_spacing"
+            android:text="@string/ride_finish_summary_message"
+            android:textColor="@color/text_secondary"
+            android:textSize="@dimen/text_body" />
+
+        <Button
+            android:id="@+id/ridePostRideSaveButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/section_spacing"
+            android:text="@string/ride_finish_save_button" />
+
+        <Button
+            android:id="@+id/ridePostRideLaterButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/s_spacing"
+            android:text="@string/ride_finish_later_button" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
