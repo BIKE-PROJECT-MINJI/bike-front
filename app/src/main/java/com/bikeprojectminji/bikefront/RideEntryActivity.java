@@ -558,6 +558,7 @@ public class RideEntryActivity extends AppCompatActivity {
     }
 
     private void completeRide() {
+        ensureRecordedFallbackPoint();
         ridePhase = PHASE_COMPLETE;
         renderRideStartButton();
         renderPostRideState();
@@ -643,6 +644,17 @@ public class RideEntryActivity extends AppCompatActivity {
             return 0;
         }
         return (int) java.time.Duration.between(activeRideStartedAt, OffsetDateTime.now()).getSeconds();
+    }
+
+    private void ensureRecordedFallbackPoint() {
+        if (latestLocation == null || !recordedRidePoints.isEmpty()) {
+            return;
+        }
+        recordedRidePoints.add(new RideRecordGateway.RideRecordPoint(
+                1,
+                latestLocation.getLatitude(),
+                latestLocation.getLongitude()
+        ));
     }
 
     private void saveRecordedRidePoints(@NonNull Bundle outState) {
