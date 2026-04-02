@@ -58,6 +58,44 @@
         android:textColor="@color/text_secondary"
         android:textSize="@dimen/text_body" />
 
+    <TextView
+        android:id="@+id/confirmSheetPrimaryHintTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/section_spacing"
+        android:text="@string/confirm_sheet_primary_label"
+        android:textColor="@color/text_primary"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/confirmSheetPhase2HintTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/xs_spacing"
+        android:text="@string/confirm_sheet_phase2_hint"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/text_body_small" />
+
+    <TextView
+        android:id="@+id/confirmSheetSecondaryHintTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/s_spacing"
+        android:text="@string/confirm_sheet_secondary_label"
+        android:textColor="@color/text_primary"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/confirmSheetLoginHintTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/xs_spacing"
+        android:text="@string/confirm_sheet_login_hint"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/text_body_small" />
+
     <ProgressBar
         android:id="@+id/confirmSheetProgressBar"
         android:layout_width="wrap_content"

@@ -54,18 +54,21 @@ public class FeaturedCourseAdapter extends RecyclerView.Adapter<FeaturedCourseAd
 
         private final TextView titleTextView;
         private final TextView distanceTextView;
+        private final TextView hintTextView;
         private final TextView durationTextView;
 
         FeaturedCourseViewHolder(@NonNull View itemView) {
             super(itemView);
             titleTextView = itemView.findViewById(R.id.featuredCourseTitleTextView);
             distanceTextView = itemView.findViewById(R.id.featuredCourseDistanceTextView);
+            hintTextView = itemView.findViewById(R.id.featuredCourseHintTextView);
             durationTextView = itemView.findViewById(R.id.featuredCourseDurationTextView);
         }
 
         void bind(FeaturedCourseUiModel item, OnCourseClickListener listener) {
             titleTextView.setText(item.getTitle());
             distanceTextView.setText(formatDistance(item));
+            hintTextView.setText(itemView.getContext().getString(R.string.featured_course_item_hint));
             durationTextView.setText(itemView.getContext().getString(R.string.featured_course_duration_format, item.getEstimatedDurationMin()));
             itemView.setOnClickListener(v -> listener.onCourseClick(item));
         }

@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity implements HomeContract.View
     private TextView featuredStatusTextView;
     private TextView featuredSortingModeTextView;
     private Button featuredRetryButton;
+    private Button homeIntroActionButton;
 
     private String currentState = "loading";
     private FeaturedCourseResponse currentResponse;
@@ -52,6 +53,7 @@ public class MainActivity extends AppCompatActivity implements HomeContract.View
         featuredStatusTextView = findViewById(R.id.featuredStatusTextView);
         featuredSortingModeTextView = findViewById(R.id.featuredSortingModeTextView);
         featuredRetryButton = findViewById(R.id.featuredRetryButton);
+        homeIntroActionButton = findViewById(R.id.homeIntroActionButton);
 
         featuredCourseAdapter = new FeaturedCourseAdapter(this::openConfirmSheet);
         featuredRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -65,6 +67,11 @@ public class MainActivity extends AppCompatActivity implements HomeContract.View
         homePresenter.attachView(this);
 
         featuredRetryButton.setOnClickListener(v -> homePresenter.loadFeaturedCourses());
+        homeIntroActionButton.setOnClickListener(v -> {
+            if (currentResponse != null && !currentResponse.getCourses().isEmpty()) {
+                openConfirmSheet(currentResponse.getCourses().get(0));
+            }
+        });
 
         if (savedInstanceState != null) {
             currentState = savedInstanceState.getString(KEY_STATE, "loading");
@@ -98,6 +105,7 @@ public class MainActivity extends AppCompatActivity implements HomeContract.View
         featuredStatusTextView.setVisibility(View.GONE);
         featuredSortingModeTextView.setVisibility(View.GONE);
         featuredRetryButton.setVisibility(View.GONE);
+        homeIntroActionButton.setEnabled(false);
     }
 
     @Override
@@ -111,6 +119,7 @@ public class MainActivity extends AppCompatActivity implements HomeContract.View
         featuredSortingModeTextView.setVisibility(View.VISIBLE);
         featuredSortingModeTextView.setText(resolveSortingModeLabel(response.getSortingMode()));
         featuredCourseAdapter.submitList(response.getCourses());
+        homeIntroActionButton.setEnabled(!response.getCourses().isEmpty());
     }
 
     @Override
@@ -123,6 +132,7 @@ public class MainActivity extends AppCompatActivity implements HomeContract.View
         featuredStatusTextView.setText(R.string.featured_empty_message);
         featuredSortingModeTextView.setVisibility(View.GONE);
         featuredRetryButton.setVisibility(View.GONE);
+        homeIntroActionButton.setEnabled(false);
     }
 
     @Override
@@ -135,6 +145,7 @@ public class MainActivity extends AppCompatActivity implements HomeContract.View
         featuredStatusTextView.setText(message);
         featuredSortingModeTextView.setVisibility(View.GONE);
         featuredRetryButton.setVisibility(View.VISIBLE);
+        homeIntroActionButton.setEnabled(false);
     }
 
     private void openConfirmSheet(FeaturedCourseUiModel course) {

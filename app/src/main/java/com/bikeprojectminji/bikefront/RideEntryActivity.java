@@ -1,5 +1,6 @@
 package com.bikeprojectminji.bikefront;
 
+import android.annotation.SuppressLint;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -22,6 +23,11 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.bikeprojectminji.bikefront.auth.AuthProfileActivity;
+import com.bikeprojectminji.bikefront.auth.AuthSessionStore;
+import com.bikeprojectminji.bikefront.course.CourseEditorActivity;
+import com.bikeprojectminji.bikefront.ride.HttpRideRecordGateway;
+import com.bikeprojectminji.bikefront.ride.RideRecordGateway;
 import com.bikeprojectminji.bikefront.ridepolicy.HttpRidePolicyEvaluationGateway;
 import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyEvaluationGateway;
 import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyUiMapper;
@@ -43,6 +49,7 @@ import org.maplibre.android.maps.MapView;
 import org.maplibre.android.maps.Style;
 import org.maplibre.android.style.layers.CircleLayer;
 import org.maplibre.android.style.layers.LineLayer;
+import org.maplibre.android.style.layers.Property;
 import org.maplibre.android.style.layers.PropertyFactory;
 import org.maplibre.android.style.sources.GeoJsonSource;
 import org.maplibre.geojson.Feature;
@@ -52,6 +59,8 @@ import org.maplibre.geojson.Point;
 
 import com.bikeprojectminji.bikefront.config.AppConfig;
 
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -63,8 +72,13 @@ public class RideEntryActivity extends AppCompatActivity {
     private static final String EXTRA_DURATION_TEXT = "extra_duration_text";
     private static final String KEY_PERMISSION_STATE = "key_permission_state";
     private static final String KEY_RIDE_PHASE = "key_ride_phase";
+    private static final String KEY_ACTIVE_RIDE_STARTED_AT = "key_active_ride_started_at";
+    private static final String KEY_RECORDED_POINT_ORDERS = "key_recorded_point_orders";
+    private static final String KEY_RECORDED_POINT_LATITUDES = "key_recorded_point_latitudes";
+    private static final String KEY_RECORDED_POINT_LONGITUDES = "key_recorded_point_longitudes";
     private static final String PHASE_PRE_START = "PRE_START";
     private static final String PHASE_ACTIVE = "ACTIVE";
+    private static final String PHASE_COMPLETE = "COMPLETE";
     private static final String ROUTE_SOURCE_ID = "ride_route_source";
     private static final String ROUTE_LAYER_ID = "ride_route_layer";
     private static final String LOCATION_SOURCE_ID = "ride_location_source";
@@ -101,9 +115,17 @@ public class RideEntryActivity extends AppCompatActivity {
     private TextView ridePolicyMessageTextView;
     private Button rideMyLocationButton;
     private Button rideStartButton;
+    private Button rideFinishButton;
     private Button ridePermissionRetryButton;
     private Button ridePermissionSettingsButton;
+    private View ridePostRideContainer;
+    private TextView ridePostRideMessageTextView;
+    private TextView ridePostRideTitleTextView;
+    private Button ridePostRideSaveButton;
+    private Button ridePostRideLaterButton;
     private MapView rideMapView;
+    private AuthSessionStore authSessionStore;
+    private RideSaveCoordinator rideSaveCoordinator;
 
     private PermissionUiState permissionUiState = PermissionUiState.REQUESTING;
     private boolean openedSettings;
@@ -127,12 +149,15 @@ public class RideEntryActivity extends AppCompatActivity {
     private String currentFlowMessage;
     private long lastPolicyEvaluationAtMillis;
     private long lastWeatherRefreshAtMillis;
+    private OffsetDateTime activeRideStartedAt;
+    private final List<RideRecordGateway.RideRecordPoint> recordedRidePoints = new ArrayList<>();
 
     private final RidePolicyEvaluationGateway ridePolicyEvaluationGateway = new HttpRidePolicyEvaluationGateway();
     private final RidePolicyUiMapper ridePolicyUiMapper = new RidePolicyUiMapper();
     private final CourseRoutePointsGateway courseRoutePointsGateway = new HttpCourseRoutePointsGateway();
     private final RideSpeedFormatter rideSpeedFormatter = new RideSpeedFormatter();
     private final CurrentWeatherGateway currentWeatherGateway = new HttpCurrentWeatherGateway();
+    private final RideRecordGateway rideRecordGateway = new HttpRideRecordGateway();
     private final LocationListener foregroundLocationListener = location -> {
         if (location == null || isFinishing() || isDestroyed()) {
             return;
@@ -144,6 +169,17 @@ public class RideEntryActivity extends AppCompatActivity {
     private final ActivityResultLauncher<String> locationPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(),
             this::handleLocationPermissionResult
+    );
+
+    private final ActivityResultLauncher<Intent> authProfileLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    persistRideRecordAndOpenEditor();
+                } else {
+                    showPostRideMessage(getString(R.string.ride_finish_login_required_message));
+                }
+            }
     );
 
     public static Intent newIntent(Context context, long courseId, String title, String distanceText, String durationText) {
@@ -184,8 +220,19 @@ public class RideEntryActivity extends AppCompatActivity {
         ridePolicyMessageTextView = findViewById(R.id.ridePolicyMessageTextView);
         rideMyLocationButton = findViewById(R.id.rideMyLocationButton);
         rideStartButton = findViewById(R.id.rideStartButton);
+        rideFinishButton = findViewById(R.id.rideFinishButton);
         ridePermissionRetryButton = findViewById(R.id.ridePermissionRetryButton);
         ridePermissionSettingsButton = findViewById(R.id.ridePermissionSettingsButton);
+        ridePostRideContainer = findViewById(R.id.ridePostRideContainer);
+        ridePostRideTitleTextView = findViewById(R.id.ridePostRideTitleTextView);
+        ridePostRideMessageTextView = findViewById(R.id.ridePostRideMessageTextView);
+        ridePostRideSaveButton = findViewById(R.id.ridePostRideSaveButton);
+        ridePostRideLaterButton = findViewById(R.id.ridePostRideLaterButton);
+
+        authSessionStore = new AuthSessionStore(this);
+        RideSaveCoordinator retainedCoordinator = (RideSaveCoordinator) getLastCustomNonConfigurationInstance();
+        rideSaveCoordinator = retainedCoordinator != null ? retainedCoordinator : new RideSaveCoordinator(rideRecordGateway);
+        rideSaveCoordinator.attach(this);
 
         Intent intent = getIntent();
         courseId = intent.getLongExtra(EXTRA_COURSE_ID, -1L);
@@ -208,9 +255,12 @@ public class RideEntryActivity extends AppCompatActivity {
         });
 
         rideStartButton.setOnClickListener(v -> requestRideStart());
+        rideFinishButton.setOnClickListener(v -> completeRide());
         rideMyLocationButton.setOnClickListener(v -> centerCameraOnCurrentLocation());
         ridePermissionRetryButton.setOnClickListener(v -> requestLocationPermission());
         ridePermissionSettingsButton.setOnClickListener(v -> openAppSettings());
+        ridePostRideSaveButton.setOnClickListener(v -> continueToSaveFlow());
+        ridePostRideLaterButton.setOnClickListener(v -> finish());
 
         loadRoutePoints();
 
@@ -218,6 +268,11 @@ public class RideEntryActivity extends AppCompatActivity {
             String savedState = savedInstanceState.getString(KEY_PERMISSION_STATE, PermissionUiState.REQUESTING.name());
             permissionUiState = PermissionUiState.valueOf(savedState);
             ridePhase = savedInstanceState.getString(KEY_RIDE_PHASE, PHASE_PRE_START);
+            String startedAt = savedInstanceState.getString(KEY_ACTIVE_RIDE_STARTED_AT);
+            if (startedAt != null && !startedAt.isBlank()) {
+                activeRideStartedAt = OffsetDateTime.parse(startedAt);
+            }
+            restoreRecordedRidePoints(savedInstanceState);
             if (hasLocationPermission()) {
                 resumeRideFlow();
             } else if (permissionUiState == PermissionUiState.REQUESTING) {
@@ -231,6 +286,7 @@ public class RideEntryActivity extends AppCompatActivity {
         }
 
         renderRideStartButton();
+        renderPostRideState();
     }
 
     @Override
@@ -258,6 +314,14 @@ public class RideEntryActivity extends AppCompatActivity {
         rideMapView.onSaveInstanceState(outState);
         outState.putString(KEY_PERMISSION_STATE, permissionUiState.name());
         outState.putString(KEY_RIDE_PHASE, ridePhase);
+        outState.putString(KEY_ACTIVE_RIDE_STARTED_AT, activeRideStartedAt == null ? null : activeRideStartedAt.toString());
+        saveRecordedRidePoints(outState);
+    }
+
+    @Override
+    public Object onRetainCustomNonConfigurationInstance() {
+        rideSaveCoordinator.detach();
+        return rideSaveCoordinator;
     }
 
     @Override
@@ -281,6 +345,7 @@ public class RideEntryActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        rideSaveCoordinator.detach();
         rideMapView.onDestroy();
         super.onDestroy();
     }
@@ -402,6 +467,7 @@ public class RideEntryActivity extends AppCompatActivity {
         }
 
         latestLocation = location;
+        recordRidePointIfNeeded(location);
         renderSpeedCard();
         renderCurrentLocationOnMap();
         centerCameraToRouteIfPossible();
@@ -446,6 +512,9 @@ public class RideEntryActivity extends AppCompatActivity {
                     if (startRequested) {
                         startRequested = false;
                         ridePhase = PHASE_ACTIVE;
+                        if (activeRideStartedAt == null) {
+                            activeRideStartedAt = OffsetDateTime.now();
+                        }
                         renderRideStartButton();
                         evaluateRidePolicy(location, PHASE_ACTIVE, true);
                         return;
@@ -488,14 +557,225 @@ public class RideEntryActivity extends AppCompatActivity {
         evaluateRidePolicy(latestLocation, PHASE_PRE_START, true);
     }
 
+    private void completeRide() {
+        ridePhase = PHASE_COMPLETE;
+        renderRideStartButton();
+        renderPostRideState();
+        showPostRideMessage(getString(R.string.ride_finish_saved_preview_message));
+    }
+
     private void renderRideStartButton() {
-        if (!hasLocationPermission() || PHASE_ACTIVE.equals(ridePhase)) {
+        if (!hasLocationPermission() || PHASE_ACTIVE.equals(ridePhase) || PHASE_COMPLETE.equals(ridePhase)) {
             rideStartButton.setVisibility(View.GONE);
+        } else {
+            rideStartButton.setVisibility(View.VISIBLE);
+            rideStartButton.setEnabled(!startRequested);
+        }
+
+        rideFinishButton.setVisibility(PHASE_ACTIVE.equals(ridePhase) ? View.VISIBLE : View.GONE);
+    }
+
+    private void renderPostRideState() {
+        if (PHASE_COMPLETE.equals(ridePhase)) {
+            ridePostRideContainer.setVisibility(View.VISIBLE);
+            return;
+        }
+        ridePostRideContainer.setVisibility(View.GONE);
+    }
+
+    private void continueToSaveFlow() {
+        if (!authSessionStore.isSignedIn()) {
+            Intent intent = new Intent(this, AuthProfileActivity.class);
+            intent.putExtra(AuthProfileActivity.EXTRA_REASON, getString(R.string.ride_finish_login_required_message));
+            authProfileLauncher.launch(intent);
+            return;
+        }
+        persistRideRecordAndOpenEditor();
+    }
+
+    private void openCourseEditor(long rideRecordId) {
+        Intent intent = new Intent(this, CourseEditorActivity.class);
+        intent.putExtra(CourseEditorActivity.EXTRA_SOURCE_SUMMARY, getString(R.string.ride_finish_saved_preview_message));
+        intent.putExtra(CourseEditorActivity.EXTRA_RIDE_RECORD_ID, rideRecordId);
+        startActivity(intent);
+    }
+
+    private void showPostRideMessage(String message) {
+        ridePostRideMessageTextView.setText(message);
+    }
+
+    private void persistRideRecordAndOpenEditor() {
+        if (activeRideStartedAt == null || latestLocation == null) {
+            showPostRideMessage(getString(R.string.ride_finish_save_failed_message));
             return;
         }
 
-        rideStartButton.setVisibility(View.VISIBLE);
-        rideStartButton.setEnabled(!startRequested);
+        if (recordedRidePoints.isEmpty()) {
+            recordRidePointIfNeeded(latestLocation);
+        }
+
+        rideSaveCoordinator.startSave(
+                authSessionStore.getAccessToken(),
+                new RideRecordGateway.RideRecordDraft(
+                        activeRideStartedAt,
+                        OffsetDateTime.now(),
+                        calculateDistanceMeters(),
+                        calculateDurationSec(),
+                        new ArrayList<>(recordedRidePoints)
+                )
+        );
+    }
+
+    private int calculateDistanceMeters() {
+        float distance = 0f;
+        for (int i = 1; i < recordedRidePoints.size(); i++) {
+            RideRecordGateway.RideRecordPoint before = recordedRidePoints.get(i - 1);
+            RideRecordGateway.RideRecordPoint after = recordedRidePoints.get(i);
+            float[] sectionDistance = new float[1];
+            Location.distanceBetween(before.getLatitude(), before.getLongitude(), after.getLatitude(), after.getLongitude(), sectionDistance);
+            distance += sectionDistance[0];
+        }
+        return Math.round(distance);
+    }
+
+    private int calculateDurationSec() {
+        if (activeRideStartedAt == null) {
+            return 0;
+        }
+        return (int) java.time.Duration.between(activeRideStartedAt, OffsetDateTime.now()).getSeconds();
+    }
+
+    private void saveRecordedRidePoints(@NonNull Bundle outState) {
+        ArrayList<Integer> pointOrders = new ArrayList<>();
+        ArrayList<Double> latitudes = new ArrayList<>();
+        ArrayList<Double> longitudes = new ArrayList<>();
+        for (RideRecordGateway.RideRecordPoint point : recordedRidePoints) {
+            pointOrders.add(point.getPointOrder());
+            latitudes.add(point.getLatitude());
+            longitudes.add(point.getLongitude());
+        }
+        outState.putIntegerArrayList(KEY_RECORDED_POINT_ORDERS, pointOrders);
+        outState.putSerializable(KEY_RECORDED_POINT_LATITUDES, latitudes);
+        outState.putSerializable(KEY_RECORDED_POINT_LONGITUDES, longitudes);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void restoreRecordedRidePoints(@NonNull Bundle savedInstanceState) {
+        recordedRidePoints.clear();
+        ArrayList<Integer> pointOrders = savedInstanceState.getIntegerArrayList(KEY_RECORDED_POINT_ORDERS);
+        ArrayList<Double> latitudes = (ArrayList<Double>) savedInstanceState.getSerializable(KEY_RECORDED_POINT_LATITUDES);
+        ArrayList<Double> longitudes = (ArrayList<Double>) savedInstanceState.getSerializable(KEY_RECORDED_POINT_LONGITUDES);
+        if (pointOrders == null || latitudes == null || longitudes == null) {
+            return;
+        }
+        int pointCount = Math.min(pointOrders.size(), Math.min(latitudes.size(), longitudes.size()));
+        for (int index = 0; index < pointCount; index++) {
+            recordedRidePoints.add(new RideRecordGateway.RideRecordPoint(
+                    pointOrders.get(index),
+                    latitudes.get(index),
+                    longitudes.get(index)
+            ));
+        }
+    }
+
+    void renderRideSaveInFlight() {
+        ridePostRideSaveButton.setEnabled(false);
+        ridePostRideTitleTextView.setText(R.string.ride_finish_summary_title);
+        showPostRideMessage(getString(R.string.ride_finish_saving_message));
+    }
+
+    void renderRideSaveSuccess(RideRecordGateway.RideRecordSaveResult result) {
+        ridePostRideSaveButton.setEnabled(true);
+        ridePostRideTitleTextView.setText(R.string.ride_finish_summary_title);
+        showPostRideMessage(getString(R.string.ride_finish_saved_success_message, result.getRideRecordId()));
+        openCourseEditor(result.getRideRecordId());
+    }
+
+    void renderRideSaveFailure(String message) {
+        ridePostRideSaveButton.setEnabled(true);
+        ridePostRideTitleTextView.setText(R.string.ride_finish_summary_title);
+        showPostRideMessage(message);
+    }
+
+    private static final class RideSaveCoordinator {
+        private final RideRecordGateway rideRecordGateway;
+        private RideEntryActivity activity;
+        private boolean inFlight;
+        private RideRecordGateway.RideRecordSaveResult pendingSuccess;
+        private String pendingFailure;
+
+        private RideSaveCoordinator(RideRecordGateway rideRecordGateway) {
+            this.rideRecordGateway = rideRecordGateway;
+        }
+
+        void attach(RideEntryActivity activity) {
+            this.activity = activity;
+            if (inFlight) {
+                activity.renderRideSaveInFlight();
+            } else if (pendingSuccess != null) {
+                RideRecordGateway.RideRecordSaveResult result = pendingSuccess;
+                pendingSuccess = null;
+                activity.renderRideSaveSuccess(result);
+            } else if (pendingFailure != null) {
+                String message = pendingFailure;
+                pendingFailure = null;
+                activity.renderRideSaveFailure(message);
+            }
+        }
+
+        void detach() {
+            this.activity = null;
+        }
+
+        void startSave(String accessToken, RideRecordGateway.RideRecordDraft draft) {
+            if (inFlight) {
+                return;
+            }
+            inFlight = true;
+            if (activity != null) {
+                activity.renderRideSaveInFlight();
+            }
+            rideRecordGateway.saveRideRecord(accessToken, draft, new RideRecordGateway.Callback() {
+                @Override
+                public void onSuccess(RideRecordGateway.RideRecordSaveResult result) {
+                    inFlight = false;
+                    if (activity != null) {
+                        activity.renderRideSaveSuccess(result);
+                        return;
+                    }
+                    pendingSuccess = result;
+                }
+
+                @Override
+                public void onFailure(String message) {
+                    inFlight = false;
+                    if (activity != null) {
+                        activity.renderRideSaveFailure(message);
+                        return;
+                    }
+                    pendingFailure = message;
+                }
+            });
+        }
+    }
+
+    private void recordRidePointIfNeeded(Location location) {
+        if (!PHASE_ACTIVE.equals(ridePhase)) {
+            return;
+        }
+        if (!recordedRidePoints.isEmpty()) {
+            RideRecordGateway.RideRecordPoint lastPoint = recordedRidePoints.get(recordedRidePoints.size() - 1);
+            float[] sectionDistance = new float[1];
+            Location.distanceBetween(lastPoint.getLatitude(), lastPoint.getLongitude(), location.getLatitude(), location.getLongitude(), sectionDistance);
+            if (sectionDistance[0] < 5f) {
+                return;
+            }
+        }
+        recordedRidePoints.add(new RideRecordGateway.RideRecordPoint(
+                recordedRidePoints.size() + 1,
+                location.getLatitude(),
+                location.getLongitude()
+        ));
     }
 
     private boolean shouldReevaluateActivePolicy(Location location) {
@@ -717,8 +997,8 @@ public class RideEntryActivity extends AppCompatActivity {
             routeLayer.setProperties(
                     PropertyFactory.lineColor(ContextCompat.getColor(this, R.color.route_line)),
                     PropertyFactory.lineWidth(4f),
-                    PropertyFactory.lineCap("round"),
-                    PropertyFactory.lineJoin("round")
+                    PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+                    PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND)
             );
             style.addLayer(routeLayer);
         }
@@ -752,9 +1032,10 @@ public class RideEntryActivity extends AppCompatActivity {
             return;
         }
 
-        List<Point> coordinates = currentRoutePoints.stream()
-                .map(point -> Point.fromLngLat(point.getLongitude(), point.getLatitude()))
-                .toList();
+        List<Point> coordinates = new ArrayList<>();
+        for (CourseRoutePointsGateway.RoutePoint point : currentRoutePoints) {
+            coordinates.add(Point.fromLngLat(point.getLongitude(), point.getLatitude()));
+        }
         Feature routeFeature = Feature.fromGeometry(LineString.fromLngLats(coordinates));
         source.setGeoJson(FeatureCollection.fromFeature(routeFeature));
     }
@@ -996,6 +1277,7 @@ public class RideEntryActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private void registerProviderUpdates(LocationManager locationManager, String provider) {
         if (!locationManager.isProviderEnabled(provider)) {
             return;
