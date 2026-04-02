@@ -32,9 +32,6 @@ public class CourseEditorActivity extends AppCompatActivity {
 
         authSessionStore = new AuthSessionStore(this);
         courseWriteGateway = new HttpCourseWriteGateway();
-        CourseCreateCoordinator retainedCoordinator = (CourseCreateCoordinator) getLastCustomNonConfigurationInstance();
-        courseCreateCoordinator = retainedCoordinator != null ? retainedCoordinator : new CourseCreateCoordinator(courseWriteGateway);
-        courseCreateCoordinator.attach(this);
 
         TextView sourceSummaryTextView = findViewById(R.id.courseEditorSourceSummaryTextView);
         EditText titleEditText = findViewById(R.id.courseEditorTitleEditText);
@@ -43,6 +40,10 @@ public class CourseEditorActivity extends AppCompatActivity {
         helperTextView = findViewById(R.id.courseEditorHelperTextView);
         saveButton = findViewById(R.id.courseEditorSaveButton);
         Button shareButton = findViewById(R.id.courseEditorShareButton);
+
+        CourseCreateCoordinator retainedCoordinator = (CourseCreateCoordinator) getLastCustomNonConfigurationInstance();
+        courseCreateCoordinator = retainedCoordinator != null ? retainedCoordinator : new CourseCreateCoordinator(courseWriteGateway);
+        courseCreateCoordinator.attach(this);
 
         sourceSummaryTextView.setText(getIntent().getStringExtra(EXTRA_SOURCE_SUMMARY));
         visibilitySpinner.setAdapter(new ArrayAdapter<>(
