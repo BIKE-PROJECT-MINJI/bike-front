@@ -8,6 +8,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -105,6 +106,21 @@ class FreeRideActivity : ComponentActivity() {
         private const val LOCATION_LAYER_ID = "ride_location_layer"
         private const val ROUTE_SOURCE_ID = "ride_route_source"
         private const val ROUTE_LAYER_ID = "ride_route_layer"
+        private const val KEY_MODE = "key_mode"
+        private const val KEY_COURSE_ID = "key_course_id"
+        private const val KEY_TITLE = "key_title"
+        private const val KEY_PERMISSION_STATE = "key_permission_state"
+        private const val KEY_IS_RIDING = "key_is_riding"
+        private const val KEY_IS_SAVING = "key_is_saving"
+        private const val KEY_STATUS_MESSAGE = "key_status_message"
+        private const val KEY_WEATHER_SUMMARY = "key_weather_summary"
+        private const val KEY_POLICY_SUMMARY = "key_policy_summary"
+        private const val KEY_POLICY_BANNER = "key_policy_banner"
+        private const val KEY_STARTED_AT = "key_started_at"
+        private const val KEY_LATEST_LOCATION = "key_latest_location"
+        private const val KEY_RECORDED_LATITUDES = "key_recorded_latitudes"
+        private const val KEY_RECORDED_LONGITUDES = "key_recorded_longitudes"
+        private const val KEY_MAP_VIEW_STATE = "key_map_view_state"
         private const val LOCATION_UPDATE_INTERVAL_MS = 2_000L
         private const val LOCATION_UPDATE_DISTANCE_M = 5f
         private const val MIN_RECORD_DISTANCE_M = 5f
@@ -147,6 +163,7 @@ class FreeRideActivity : ComponentActivity() {
     private var policySummary by mutableStateOf("정책 없음")
     private var policyBanner by mutableStateOf<String?>(null)
     private var startedAt: OffsetDateTime? = null
+    private var mapViewState: Bundle? = null
     private var mapView: MapView? = null
     private var mapLibreMap: MapLibreMap? = null
     private var currentRoutePoints: List<CourseRoutePointsGateway.RoutePoint> = emptyList()
@@ -199,6 +216,7 @@ class FreeRideActivity : ComponentActivity() {
             if (rideMode == RideMode.FREE_RIDE) "자유 주행" else "코스 따라가기"
         }
         statusMessage = readyStatusMessage()
+        restoreState(savedInstanceState)
 
         setContent {
             BikeFrontTheme {
@@ -213,6 +231,8 @@ class FreeRideActivity : ComponentActivity() {
                     weatherSummary = weatherSummary,
                     policySummary = policySummary,
                     policyBanner = policyBanner,
+                    mapViewSavedState = mapViewState,
+                    canSaveRecord = canSaveRecord(),
                     onBack = { finish() },
                     onRequestPermission = { requestLocationPermission() },
                     onOpenSettings = { openAppSettings() },
@@ -237,16 +257,89 @@ class FreeRideActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        mapView?.onStart()
+    }
+
     override fun onPause() {
         stopLocationUpdates()
         mapView?.onPause()
         super.onPause()
     }
 
+    override fun onStop() {
+        mapView?.onStop()
+        super.onStop()
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        mapView?.onLowMemory()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(KEY_MODE, rideMode.name)
+        outState.putLong(KEY_COURSE_ID, courseId)
+        outState.putString(KEY_TITLE, screenTitle)
+        outState.putString(KEY_PERMISSION_STATE, permissionState.name)
+        outState.putBoolean(KEY_IS_RIDING, isRiding)
+        outState.putBoolean(KEY_IS_SAVING, isSaving)
+        outState.putString(KEY_STATUS_MESSAGE, statusMessage)
+        outState.putString(KEY_WEATHER_SUMMARY, weatherSummary)
+        outState.putString(KEY_POLICY_SUMMARY, policySummary)
+        outState.putString(KEY_POLICY_BANNER, policyBanner)
+        outState.putString(KEY_STARTED_AT, startedAt?.toString())
+        latestLocation?.let { outState.putParcelable(KEY_LATEST_LOCATION, it) }
+        if (recordedPoints.isNotEmpty()) {
+            outState.putDoubleArray(KEY_RECORDED_LATITUDES, recordedPoints.map { it.latitude }.toDoubleArray())
+            outState.putDoubleArray(KEY_RECORDED_LONGITUDES, recordedPoints.map { it.longitude }.toDoubleArray())
+        }
+        val savedMapState = Bundle()
+        mapView?.onSaveInstanceState(savedMapState)
+        outState.putBundle(KEY_MAP_VIEW_STATE, savedMapState)
+    }
+
     override fun onDestroy() {
         stopLocationUpdates()
         mapView?.onDestroy()
         super.onDestroy()
+    }
+
+    private fun restoreState(savedInstanceState: Bundle?) {
+        if (savedInstanceState == null) return
+        rideMode = runCatching { RideMode.valueOf(savedInstanceState.getString(KEY_MODE) ?: rideMode.name) }
+            .getOrDefault(rideMode)
+        courseId = savedInstanceState.getLong(KEY_COURSE_ID, courseId)
+        screenTitle = savedInstanceState.getString(KEY_TITLE).orEmpty().ifBlank { screenTitle }
+        permissionState = runCatching {
+            PermissionState.valueOf(savedInstanceState.getString(KEY_PERMISSION_STATE) ?: permissionState.name)
+        }.getOrDefault(permissionState)
+        isRiding = savedInstanceState.getBoolean(KEY_IS_RIDING, isRiding)
+        isSaving = savedInstanceState.getBoolean(KEY_IS_SAVING, isSaving)
+        statusMessage = savedInstanceState.getString(KEY_STATUS_MESSAGE).orEmpty().ifBlank { statusMessage }
+        weatherSummary = savedInstanceState.getString(KEY_WEATHER_SUMMARY).orEmpty().ifBlank { weatherSummary }
+        policySummary = savedInstanceState.getString(KEY_POLICY_SUMMARY).orEmpty().ifBlank { policySummary }
+        policyBanner = savedInstanceState.getString(KEY_POLICY_BANNER)
+        startedAt = savedInstanceState.getString(KEY_STARTED_AT)?.let { OffsetDateTime.parse(it) }
+        latestLocation = savedInstanceState.readLocationCompat(KEY_LATEST_LOCATION)
+        recordedPoints.clear()
+        val latitudes = savedInstanceState.getDoubleArray(KEY_RECORDED_LATITUDES)
+        val longitudes = savedInstanceState.getDoubleArray(KEY_RECORDED_LONGITUDES)
+        if (latitudes != null && longitudes != null) {
+            val size = minOf(latitudes.size, longitudes.size)
+            repeat(size) { index ->
+                recordedPoints.add(
+                    RideRecordGateway.RideRecordPoint(
+                        index + 1,
+                        latitudes[index],
+                        longitudes[index],
+                    ),
+                )
+            }
+        }
+        mapViewState = savedInstanceState.getBundle(KEY_MAP_VIEW_STATE)
     }
 
     private fun attachMap(view: MapView) {
@@ -412,7 +505,7 @@ class FreeRideActivity : ComponentActivity() {
     }
 
     private fun continueToSaveFlow() {
-        if (startedAt == null || recordedPoints.isEmpty()) {
+        if (!canSaveRecord()) {
             statusMessage = getString(R.string.ride_finish_save_failed_message)
             return
         }
@@ -626,6 +719,10 @@ class FreeRideActivity : ComponentActivity() {
         return if (rideMode == RideMode.FREE_RIDE) getString(R.string.free_ride_status_ready) else getString(R.string.course_follow_status_ready)
     }
 
+    private fun canSaveRecord(): Boolean {
+        return !isRiding && !isSaving && startedAt != null && recordedPoints.isNotEmpty()
+    }
+
     private fun activeStatusMessage(): String {
         return if (rideMode == RideMode.FREE_RIDE) getString(R.string.free_ride_status_active) else getString(R.string.course_follow_status_active)
     }
@@ -647,6 +744,8 @@ private fun RideScreen(
     weatherSummary: String,
     policySummary: String,
     policyBanner: String?,
+    mapViewSavedState: Bundle?,
+    canSaveRecord: Boolean,
     onBack: () -> Unit,
     onRequestPermission: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -662,7 +761,7 @@ private fun RideScreen(
             modifier = Modifier.fillMaxSize(),
             factory = {
                 MapView(context).apply {
-                    onCreate(null)
+                    onCreate(mapViewSavedState)
                     onMapReady(this)
                 }
             },
@@ -741,7 +840,7 @@ private fun RideScreen(
                                 Text("주행 종료")
                             }
                         }
-                        OutlinedButton(onClick = onSaveRecord, enabled = !isRiding && latestLocation != null && !isSaving, modifier = Modifier.weight(1f)) {
+                        OutlinedButton(onClick = onSaveRecord, enabled = canSaveRecord, modifier = Modifier.weight(1f)) {
                             Text(if (isSaving) "저장 중" else "기록 저장")
                         }
                     }
@@ -765,3 +864,12 @@ private fun Double.format(digits: Int): String = String.format("%.${digits}f", t
 
 @Composable
 private fun stringResourceCompat(@StringRes id: Int): String = LocalContext.current.getString(id)
+
+private fun Bundle.readLocationCompat(key: String): Location? {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        getParcelable(key, Location::class.java)
+    } else {
+        @Suppress("DEPRECATION")
+        getParcelable(key)
+    }
+}
