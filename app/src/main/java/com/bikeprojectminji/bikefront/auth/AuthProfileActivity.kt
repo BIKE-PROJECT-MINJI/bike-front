@@ -19,7 +19,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
 import com.bikeprojectminji.bikefront.R
 import com.bikeprojectminji.bikefront.ui.screen.SectionTitle
 import com.bikeprojectminji.bikefront.ui.theme.BikeFrontTheme
@@ -149,6 +153,11 @@ private fun AuthProfileScreen(
             modifier = Modifier.fillMaxWidth(),
             label = { Text("비밀번호") },
             placeholder = { Text("비밀번호를 입력해 주세요") },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Done,
+            ),
             singleLine = true,
         )
 
