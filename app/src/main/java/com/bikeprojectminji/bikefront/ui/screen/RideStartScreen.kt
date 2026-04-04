@@ -23,8 +23,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.Dispatchers
@@ -81,7 +81,7 @@ fun RideStartScreen(
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(text = "자유 주행", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimary)
                 Text(
-                    text = "코스 없이 바로 기록을 시작하는 모드입니다. 실제 free ride 화면은 다음 phase에서 연결합니다.",
+                    text = "코스 없이 바로 기록을 시작하는 모드입니다. 현재 구현된 자유 주행 화면으로 바로 진입합니다.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimary,
                 )

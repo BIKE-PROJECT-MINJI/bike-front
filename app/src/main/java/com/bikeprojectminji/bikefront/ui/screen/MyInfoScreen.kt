@@ -11,10 +11,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
 fun MyInfoScreen(
@@ -22,8 +30,21 @@ fun MyInfoScreen(
     onOpenProfile: () -> Unit,
 ) {
     val context = LocalContext.current
-    val authSessionStore = AuthSessionStore(context)
-    val displayName = authSessionStore.displayName?.takeIf { it.isNotBlank() } ?: "아직 로그인하지 않았습니다"
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val authSessionStore = remember(context) { AuthSessionStore(context) }
+    var displayName by remember { mutableStateOf(authSessionStore.displayName?.takeIf { it.isNotBlank() } ?: "아직 로그인하지 않았습니다") }
+
+    DisposableEffect(lifecycleOwner, authSessionStore) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                displayName = authSessionStore.displayName?.takeIf { it.isNotBlank() } ?: "아직 로그인하지 않았습니다"
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -38,7 +59,7 @@ fun MyInfoScreen(
             Text("로그인 / 프로필 열기")
         }
         OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) {
-            Text("내 기록은 다음 phase에서 연결")
+            Text("내 기록 화면은 아직 연결하지 않았습니다")
         }
     }
 }

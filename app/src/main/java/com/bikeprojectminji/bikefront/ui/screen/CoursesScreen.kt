@@ -21,8 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.Dispatchers
@@ -89,7 +89,7 @@ fun CoursesScreen(
             if (selectedTab == CourseTab.ALL && allCoursesState.value?.hasNext == true) {
                 item {
                     OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                        Text("더보기는 다음 phase에서 연결")
+                        Text("추가 코스 불러오기는 아직 연결하지 않았습니다")
                     }
                 }
             }
