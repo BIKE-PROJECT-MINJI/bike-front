@@ -15,6 +15,9 @@
             android:name=".course.CourseEditorActivity"
             android:exported="false" />
         <activity
+            android:name=".free.FreeRideActivity"
+            android:exported="false" />
+        <activity
             android:name=".auth.AuthProfileActivity"
             android:exported="false" />
         <activity
