@@ -1,14 +1,16 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -17,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import androidx.compose.ui.platform.LocalContext
@@ -50,16 +53,52 @@ fun MyInfoScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        SectionTitle(title = "내 정보", subtitle = "로그인 상태와 추후 기록/설정 진입 영역입니다.")
-        Text(text = displayName, style = MaterialTheme.typography.headlineSmall)
-        Button(onClick = onOpenProfile, modifier = Modifier.fillMaxWidth()) {
-            Text("로그인 / 프로필 열기")
+        // GAJA Header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.primary)
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+        ) {
+            Text(
+                text = "내 정보",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary,
+            )
         }
-        OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) {
-            Text("내 기록 화면은 아직 연결하지 않았습니다")
+
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            // Profile Card
+            ProfileCard(
+                displayName = displayName,
+                onProfileClick = onOpenProfile,
+            )
+
+            // Info Section
+            SectionTitle(
+                title = "계정",
+                subtitle = "로그인 상태와 추후 기록/설정 진입 영역입니다.",
+            )
+
+            // Action Buttons
+            GajaSecondaryButton(
+                text = "로그인 / 프로필 열기",
+                onClick = onOpenProfile,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            GajaOutlinedButton(
+                text = "내 기록 화면은 아직 연결하지 않았습니다",
+                onClick = { },
+                enabled = false,
+            )
         }
     }
 }
