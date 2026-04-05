@@ -1,18 +1,21 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -22,7 +25,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -65,46 +72,96 @@ fun RideStartScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
-            .padding(20.dp)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        SectionTitle(
-            title = "라이딩 시작",
-            subtitle = "지금 바로 자유 주행을 시작하거나 추천 코스로 진입하세요.",
-        )
-
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-            modifier = Modifier.fillMaxWidth(),
+        // GAJA Hero Header Section
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiary,
+                        ),
+                    ),
+                )
+                .padding(horizontal = 24.dp, vertical = 32.dp),
         ) {
-            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(text = "자유 주행", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimary)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Text(
-                    text = "코스 없이 바로 기록을 시작하는 모드입니다. 현재 구현된 자유 주행 화면으로 바로 진입합니다.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "GAJA",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
-                Button(onClick = onOpenFreeRide) {
-                    Text("자유 주행 준비 화면 열기")
+                Text(
+                    text = "오늘도 안전하게 라이딩하세요",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            // Free Ride Primary Card
+            GajaPrimaryCard(
+                title = "자유 주행",
+                description = "코스 없이 바로 기록을 시작하는 모드입니다. 현재 위치에서 바로 시작하세요.",
+                buttonText = "자유 주행 시작",
+                onClick = onOpenFreeRide,
+            )
+
+            // Recommended Courses Section
+            SectionTitle(
+                title = "추천 코스",
+                subtitle = "빠르게 바로 탈 수 있는 코스를 먼저 보여줍니다.",
+            )
+
+            if (featuredCourses.value.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                    ) {
+                        Text(
+                            text = "추천 코스를 불러오는 중이거나 아직 준비되지 않았습니다.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    featuredCourses.value.forEach { course ->
+                        CourseCard(course = course, onClick = { onOpenCourse(course) })
+                    }
                 }
             }
-        }
 
-        SectionTitle(title = "추천 코스", subtitle = "빠르게 바로 탈 수 있는 코스를 먼저 보여줍니다.")
-        if (featuredCourses.value.isEmpty()) {
-            Text(text = "추천 코스를 불러오는 중이거나 아직 준비되지 않았습니다.", style = MaterialTheme.typography.bodyMedium)
-        } else {
-            featuredCourses.value.forEach { course ->
-                CourseCard(course = course, onClick = { onOpenCourse(course) })
-            }
-        }
+            // Secondary Actions
+            GajaSecondaryButton(
+                text = "전체 코스 보러 가기",
+                onClick = onOpenCourses,
+            )
 
-        OutlinedButton(onClick = onOpenCourses, modifier = Modifier.fillMaxWidth()) {
-            Text("전체 코스 보러 가기")
-        }
-        OutlinedButton(onClick = onOpenProfile, modifier = Modifier.fillMaxWidth()) {
-            Text("내 정보 / 로그인")
+            GajaOutlinedButton(
+                text = "내 정보 / 로그인",
+                onClick = onOpenProfile,
+            )
         }
     }
 }
