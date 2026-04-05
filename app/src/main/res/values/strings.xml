@@ -64,9 +64,11 @@
     <string name="ride_map_route_loading_message">경로를 불러오는 중입니다.</string>
     <string name="ride_map_route_error_message">경로를 불러오지 못했습니다.</string>
     <string name="ride_map_route_empty_message">경로 정보가 없습니다.</string>
-    <string name="ride_speed_card_title">속도</string>
+    <string name="ride_speed_card_title">현재 속도</string>
     <string name="ride_speed_loading">--</string>
+    <string name="ride_speed_unit">km/h</string>
     <string name="ride_speed_message_default">현재 속도를 표시합니다.</string>
+    <string name="ride_recording_label">기록 중</string>
     <string name="ride_location_card_title">위치</string>
     <string name="ride_location_loading_value">확인 중</string>
     <string name="ride_location_permission_value">권한 필요</string>
