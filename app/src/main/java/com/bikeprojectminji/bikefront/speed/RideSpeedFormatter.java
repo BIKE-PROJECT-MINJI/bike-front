@@ -13,11 +13,7 @@ public class RideSpeedFormatter {
         }
 
         int speedKmh = resolveSpeedKmh(currentLocation, previousLocation);
-        String message = null;
-
-        if (currentLocation.hasAccuracy() && currentLocation.getAccuracy() > 50f) {
-            message = "현재 위치 정보가 불안정합니다.";
-        }
+        String message = resolveAccuracyMessage(currentLocation.hasAccuracy(), currentLocation.getAccuracy());
 
         return new RideSpeedUiState(speedKmh + "km/h", message);
     }
@@ -43,7 +39,14 @@ public class RideSpeedFormatter {
         return normalizeSpeedKmh(fallbackSpeedKmh);
     }
 
-    private int normalizeSpeedKmh(float speedKmh) {
+    static String resolveAccuracyMessage(boolean hasAccuracy, float accuracyMeters) {
+        if (hasAccuracy && accuracyMeters > 50f) {
+            return "현재 위치 정보가 불안정합니다.";
+        }
+        return null;
+    }
+
+    static int normalizeSpeedKmh(float speedKmh) {
         if (speedKmh < 1f) {
             return 0;
         }
