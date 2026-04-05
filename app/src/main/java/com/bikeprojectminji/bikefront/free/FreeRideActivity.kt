@@ -14,10 +14,12 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.ColorRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -63,10 +66,12 @@ import com.bikeprojectminji.bikefront.ridemap.HttpCourseRoutePointsGateway
 import com.bikeprojectminji.bikefront.ridepolicy.HttpRidePolicyEvaluationGateway
 import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyEvaluationGateway
 import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyUiMapper
+import com.bikeprojectminji.bikefront.speed.RideSpeedFormatter
 import com.bikeprojectminji.bikefront.ui.model.RideMode
 import com.bikeprojectminji.bikefront.ui.theme.BikeFrontTheme
 import com.bikeprojectminji.bikefront.weather.CurrentWeatherGateway
 import com.bikeprojectminji.bikefront.weather.HttpCurrentWeatherGateway
+import com.bikeprojectminji.bikefront.weather.WeatherHudValueFormatter
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -113,8 +118,16 @@ class FreeRideActivity : ComponentActivity() {
         private const val KEY_IS_RIDING = "key_is_riding"
         private const val KEY_IS_SAVING = "key_is_saving"
         private const val KEY_STATUS_MESSAGE = "key_status_message"
-        private const val KEY_WEATHER_SUMMARY = "key_weather_summary"
-        private const val KEY_POLICY_SUMMARY = "key_policy_summary"
+        private const val KEY_SPEED_VALUE = "key_speed_value"
+        private const val KEY_SPEED_MESSAGE = "key_speed_message"
+        private const val KEY_WEATHER_VALUE = "key_weather_value"
+        private const val KEY_WEATHER_MESSAGE = "key_weather_message"
+        private const val KEY_WEATHER_STALE = "key_weather_stale"
+        private const val KEY_WIND_VALUE = "key_wind_value"
+        private const val KEY_WIND_MESSAGE = "key_wind_message"
+        private const val KEY_POLICY_LABEL = "key_policy_label"
+        private const val KEY_POLICY_DETAIL = "key_policy_detail"
+        private const val KEY_POLICY_TEXT_COLOR = "key_policy_text_color"
         private const val KEY_POLICY_BANNER = "key_policy_banner"
         private const val KEY_STARTED_AT = "key_started_at"
         private const val KEY_LATEST_LOCATION = "key_latest_location"
@@ -149,6 +162,7 @@ class FreeRideActivity : ComponentActivity() {
     private val courseRoutePointsGateway: CourseRoutePointsGateway by lazy { HttpCourseRoutePointsGateway() }
     private val ridePolicyEvaluationGateway: RidePolicyEvaluationGateway by lazy { HttpRidePolicyEvaluationGateway() }
     private val ridePolicyUiMapper = RidePolicyUiMapper()
+    private val rideSpeedFormatter = RideSpeedFormatter()
     private val currentWeatherGateway: CurrentWeatherGateway by lazy { HttpCurrentWeatherGateway() }
 
     private var rideMode by mutableStateOf(RideMode.FREE_RIDE)
@@ -159,8 +173,18 @@ class FreeRideActivity : ComponentActivity() {
     private var isRiding by mutableStateOf(false)
     private var isSaving by mutableStateOf(false)
     private var statusMessage by mutableStateOf("")
-    private var weatherSummary by mutableStateOf("날씨 확인 전")
-    private var policySummary by mutableStateOf("정책 없음")
+    private var speedValue by mutableStateOf("--")
+    private var speedMessage by mutableStateOf("")
+    private var locationCardValue by mutableStateOf("확인 중")
+    private var locationCardMessage by mutableStateOf("")
+    private var weatherValue by mutableStateOf("--")
+    private var weatherMessage by mutableStateOf("")
+    private var weatherStale by mutableStateOf(false)
+    private var windValue by mutableStateOf("--")
+    private var windMessage by mutableStateOf("")
+    private var policyLabel by mutableStateOf("정책 없음")
+    private var policyDetail by mutableStateOf("")
+    private var policyTextColorResId by mutableStateOf(R.color.info_text)
     private var policyBanner by mutableStateOf<String?>(null)
     private var startedAt: OffsetDateTime? = null
     private var mapViewState: Bundle? = null
@@ -168,6 +192,8 @@ class FreeRideActivity : ComponentActivity() {
     private var mapLibreMap: MapLibreMap? = null
     private var currentRoutePoints: List<CourseRoutePointsGateway.RoutePoint> = emptyList()
     private val recordedPoints = mutableListOf<RideRecordGateway.RideRecordPoint>()
+    private var previousSpeedLocation: Location? = null
+    private var hasLocationQualityIssue = false
     private var lastPolicyEvaluationLocation: Location? = null
     private var lastPolicyEvaluationAtMillis: Long = 0L
     private var lastWeatherRefreshLocation: Location? = null
@@ -177,8 +203,9 @@ class FreeRideActivity : ComponentActivity() {
 
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         permissionState = if (granted) PermissionState.GRANTED else PermissionState.DENIED
+        refreshLocationHudState()
         if (granted) {
-            statusMessage = readyStatusMessage()
+            refreshRideStatusMessage()
             startLocationUpdatesIfPossible()
         }
     }
@@ -193,16 +220,26 @@ class FreeRideActivity : ComponentActivity() {
     }
 
     private val locationListener = LocationListener { location ->
-        if (location.hasAccuracy() && location.accuracy > MAX_ACCEPTABLE_ACCURACY_M) return@LocationListener
+        val speedUi = rideSpeedFormatter.format(location, previousSpeedLocation)
+        speedValue = speedUi.speedText
+        speedMessage = speedUi.message ?: getString(R.string.ride_speed_message_default)
+        previousSpeedLocation = Location(location)
+        hasLocationQualityIssue = location.hasAccuracy() && location.accuracy > MAX_ACCEPTABLE_ACCURACY_M
+        refreshLocationHudState()
+
+        if (hasLocationQualityIssue) {
+            refreshRideStatusMessage()
+            return@LocationListener
+        }
         latestLocation = location
+        refreshLocationHudState()
         renderCurrentLocationOnMap(location)
         maybeRefreshWeather(location)
         if (isRiding) {
             recordRidePointIfNeeded(location)
-            statusMessage = activeStatusMessage()
             maybeEvaluateActivePolicy(location)
         } else {
-            statusMessage = readyStatusMessage()
+            refreshRideStatusMessage()
         }
     }
 
@@ -215,7 +252,9 @@ class FreeRideActivity : ComponentActivity() {
         screenTitle = intent.getStringExtra(EXTRA_TITLE).orEmpty().ifBlank {
             if (rideMode == RideMode.FREE_RIDE) "자유 주행" else "코스 따라가기"
         }
-        statusMessage = readyStatusMessage()
+        initializeHudState()
+        refreshLocationHudState()
+        refreshRideStatusMessage()
         restoreState(savedInstanceState)
 
         setContent {
@@ -228,8 +267,18 @@ class FreeRideActivity : ComponentActivity() {
                     isRiding = isRiding,
                     isSaving = isSaving,
                     statusMessage = statusMessage,
-                    weatherSummary = weatherSummary,
-                    policySummary = policySummary,
+                    speedValue = speedValue,
+                    speedMessage = speedMessage,
+                    locationCardValue = locationCardValue,
+                    locationCardMessage = locationCardMessage,
+                    weatherValue = weatherValue,
+                    weatherMessage = weatherMessage,
+                    weatherStale = weatherStale,
+                    windValue = windValue,
+                    windMessage = windMessage,
+                    policyLabel = policyLabel,
+                    policyDetail = policyDetail,
+                    policyTextColorResId = policyTextColorResId,
                     policyBanner = policyBanner,
                     mapViewSavedState = mapViewState,
                     canSaveRecord = canSaveRecord(),
@@ -251,9 +300,11 @@ class FreeRideActivity : ComponentActivity() {
         mapView?.onResume()
         if (hasLocationPermission()) {
             permissionState = PermissionState.GRANTED
+            refreshLocationHudState()
             startLocationUpdatesIfPossible()
         } else if (permissionState == PermissionState.REQUESTING) {
             permissionState = PermissionState.NEED_PERMISSION
+            refreshLocationHudState()
         }
     }
 
@@ -287,8 +338,16 @@ class FreeRideActivity : ComponentActivity() {
         outState.putBoolean(KEY_IS_RIDING, isRiding)
         outState.putBoolean(KEY_IS_SAVING, isSaving)
         outState.putString(KEY_STATUS_MESSAGE, statusMessage)
-        outState.putString(KEY_WEATHER_SUMMARY, weatherSummary)
-        outState.putString(KEY_POLICY_SUMMARY, policySummary)
+        outState.putString(KEY_SPEED_VALUE, speedValue)
+        outState.putString(KEY_SPEED_MESSAGE, speedMessage)
+        outState.putString(KEY_WEATHER_VALUE, weatherValue)
+        outState.putString(KEY_WEATHER_MESSAGE, weatherMessage)
+        outState.putBoolean(KEY_WEATHER_STALE, weatherStale)
+        outState.putString(KEY_WIND_VALUE, windValue)
+        outState.putString(KEY_WIND_MESSAGE, windMessage)
+        outState.putString(KEY_POLICY_LABEL, policyLabel)
+        outState.putString(KEY_POLICY_DETAIL, policyDetail)
+        outState.putInt(KEY_POLICY_TEXT_COLOR, policyTextColorResId)
         outState.putString(KEY_POLICY_BANNER, policyBanner)
         outState.putString(KEY_STARTED_AT, startedAt?.toString())
         latestLocation?.let { outState.putParcelable(KEY_LATEST_LOCATION, it) }
@@ -319,11 +378,21 @@ class FreeRideActivity : ComponentActivity() {
         isRiding = savedInstanceState.getBoolean(KEY_IS_RIDING, isRiding)
         isSaving = savedInstanceState.getBoolean(KEY_IS_SAVING, isSaving)
         statusMessage = savedInstanceState.getString(KEY_STATUS_MESSAGE).orEmpty().ifBlank { statusMessage }
-        weatherSummary = savedInstanceState.getString(KEY_WEATHER_SUMMARY).orEmpty().ifBlank { weatherSummary }
-        policySummary = savedInstanceState.getString(KEY_POLICY_SUMMARY).orEmpty().ifBlank { policySummary }
+        speedValue = savedInstanceState.getString(KEY_SPEED_VALUE).orEmpty().ifBlank { speedValue }
+        speedMessage = savedInstanceState.getString(KEY_SPEED_MESSAGE).orEmpty().ifBlank { speedMessage }
+        weatherValue = savedInstanceState.getString(KEY_WEATHER_VALUE).orEmpty().ifBlank { weatherValue }
+        weatherMessage = savedInstanceState.getString(KEY_WEATHER_MESSAGE).orEmpty().ifBlank { weatherMessage }
+        weatherStale = savedInstanceState.getBoolean(KEY_WEATHER_STALE, weatherStale)
+        windValue = savedInstanceState.getString(KEY_WIND_VALUE).orEmpty().ifBlank { windValue }
+        windMessage = savedInstanceState.getString(KEY_WIND_MESSAGE).orEmpty().ifBlank { windMessage }
+        policyLabel = savedInstanceState.getString(KEY_POLICY_LABEL).orEmpty().ifBlank { policyLabel }
+        policyDetail = savedInstanceState.getString(KEY_POLICY_DETAIL).orEmpty().ifBlank { policyDetail }
+        policyTextColorResId = savedInstanceState.getInt(KEY_POLICY_TEXT_COLOR, policyTextColorResId)
         policyBanner = savedInstanceState.getString(KEY_POLICY_BANNER)
         startedAt = savedInstanceState.getString(KEY_STARTED_AT)?.let { OffsetDateTime.parse(it) }
         latestLocation = savedInstanceState.readLocationCompat(KEY_LATEST_LOCATION)
+        previousSpeedLocation = latestLocation?.let { Location(it) }
+        hasLocationQualityIssue = speedMessage == getString(R.string.location_quality_low_message)
         recordedPoints.clear()
         val latitudes = savedInstanceState.getDoubleArray(KEY_RECORDED_LATITUDES)
         val longitudes = savedInstanceState.getDoubleArray(KEY_RECORDED_LONGITUDES)
@@ -340,6 +409,8 @@ class FreeRideActivity : ComponentActivity() {
             }
         }
         mapViewState = savedInstanceState.getBundle(KEY_MAP_VIEW_STATE)
+        refreshLocationHudState()
+        refreshRideStatusMessage()
     }
 
     private fun attachMap(view: MapView) {
@@ -375,14 +446,18 @@ class FreeRideActivity : ComponentActivity() {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, LOCATION_UPDATE_INTERVAL_MS, LOCATION_UPDATE_DISTANCE_M, locationListener)
             resolveBestLastKnownLocation(locationManager)?.let {
                 latestLocation = it
+                hasLocationQualityIssue = it.hasAccuracy() && it.accuracy > MAX_ACCEPTABLE_ACCURACY_M
+                refreshLocationHudState()
                 renderCurrentLocationOnMap(it)
                 centerCameraToContent()
                 maybeRefreshWeather(it)
             }
         } catch (_: SecurityException) {
             permissionState = PermissionState.SETTINGS_REQUIRED
+            refreshLocationHudState()
         } catch (_: IllegalArgumentException) {
             permissionState = PermissionState.SETTINGS_REQUIRED
+            refreshLocationHudState()
         }
     }
 
@@ -437,7 +512,10 @@ class FreeRideActivity : ComponentActivity() {
 
             override fun onFailure(message: String) {
                 currentRoutePoints = emptyList()
-                policySummary = message
+                policyLabel = getString(R.string.ride_policy_error_label)
+                policyDetail = message
+                policyTextColorResId = R.color.error_text
+                refreshRideStatusMessage()
             }
         })
     }
@@ -494,14 +572,14 @@ class FreeRideActivity : ComponentActivity() {
         isRiding = true
         recordedPoints.clear()
         recordRidePointForce(location)
-        statusMessage = activeStatusMessage()
+        refreshRideStatusMessage()
     }
 
     private fun finishRide() {
         if (!isRiding) return
         latestLocation?.let { recordRidePointIfNeeded(it) }
         isRiding = false
-        statusMessage = completeStatusMessage()
+        refreshRideStatusMessage()
     }
 
     private fun continueToSaveFlow() {
@@ -569,7 +647,10 @@ class FreeRideActivity : ComponentActivity() {
 
     private fun evaluatePreStartPolicy(location: Location) {
         if (courseId <= 0L) {
-            policySummary = getString(R.string.ride_policy_missing_course_message)
+            policyLabel = getString(R.string.ride_policy_error_label)
+            policyDetail = getString(R.string.ride_policy_missing_course_message)
+            policyTextColorResId = R.color.error_text
+            refreshRideStatusMessage()
             return
         }
         policyRequestInFlight = true
@@ -577,8 +658,7 @@ class FreeRideActivity : ComponentActivity() {
             override fun onSuccess(result: RidePolicyEvaluationGateway.EvaluationResult) {
                 policyRequestInFlight = false
                 val ui = ridePolicyUiMapper.map(result)
-                policySummary = "${ui.stateLabel}: ${ui.message}"
-                policyBanner = ui.bannerMessage.takeIf { ui.isShowBanner && it.isNotBlank() }
+                applyPolicyUiState(ui)
                 if (result.startGate.status == "ELIGIBLE") {
                     activateRide(location)
                 }
@@ -586,8 +666,11 @@ class FreeRideActivity : ComponentActivity() {
 
             override fun onFailure(message: String) {
                 policyRequestInFlight = false
-                policySummary = message
+                policyLabel = getString(R.string.ride_policy_error_label)
+                policyDetail = message
+                policyTextColorResId = R.color.error_text
                 policyBanner = message
+                refreshRideStatusMessage()
             }
         })
     }
@@ -602,13 +685,16 @@ class FreeRideActivity : ComponentActivity() {
             override fun onSuccess(result: RidePolicyEvaluationGateway.EvaluationResult) {
                 policyRequestInFlight = false
                 val ui = ridePolicyUiMapper.map(result)
-                policySummary = "${ui.stateLabel}: ${ui.message}"
-                policyBanner = ui.bannerMessage.takeIf { ui.isShowBanner && it.isNotBlank() }
+                applyPolicyUiState(ui)
             }
 
             override fun onFailure(message: String) {
                 policyRequestInFlight = false
-                policySummary = message
+                policyLabel = getString(R.string.ride_policy_error_label)
+                policyDetail = message
+                policyTextColorResId = R.color.error_text
+                policyBanner = null
+                refreshRideStatusMessage()
             }
         })
     }
@@ -636,29 +722,105 @@ class FreeRideActivity : ComponentActivity() {
         currentWeatherGateway.loadCurrent(location.latitude, location.longitude, object : CurrentWeatherGateway.Callback {
             override fun onSuccess(result: CurrentWeatherGateway.WeatherResult) {
                 weatherRequestInFlight = false
-                weatherSummary = buildString {
-                    append(result.temperatureC ?: "--")
-                    append("°C")
-                    if (!result.windDirectionText.isNullOrBlank() && result.windSpeedKmh != null) {
-                        append(" · ")
-                        append(result.windDirectionText)
-                        append(" ")
-                        append(result.windSpeedKmh)
-                        append("km/h")
-                    }
+                weatherValue = WeatherHudValueFormatter.formatTemperature(result.temperatureC)
+                weatherMessage = if (WeatherHudValueFormatter.shouldShowStale(result.isStale)) {
+                    getString(R.string.ride_weather_stale_message)
+                } else {
+                    getString(R.string.ride_weather_message_default)
                 }
+                weatherStale = result.isStale
+                windValue = WeatherHudValueFormatter.formatWind(result.windDirectionText, result.windSpeedKmh)
+                windMessage = if (WeatherHudValueFormatter.shouldShowStale(result.isStale)) {
+                    getString(R.string.ride_weather_stale_message)
+                } else {
+                    getString(R.string.ride_wind_message_default)
+                }
+                refreshRideStatusMessage()
             }
 
             override fun onEmpty() {
                 weatherRequestInFlight = false
-                weatherSummary = getString(R.string.ride_weather_empty_message)
+                weatherValue = getString(R.string.ride_weather_empty_value)
+                weatherMessage = getString(R.string.ride_weather_empty_message)
+                weatherStale = false
+                windValue = getString(R.string.ride_wind_empty_value)
+                windMessage = getString(R.string.ride_wind_empty_message)
+                refreshRideStatusMessage()
             }
 
             override fun onFailure(message: String) {
                 weatherRequestInFlight = false
-                weatherSummary = message
+                weatherValue = getString(R.string.ride_weather_empty_value)
+                weatherMessage = message
+                weatherStale = false
+                windValue = getString(R.string.ride_wind_empty_value)
+                windMessage = getString(R.string.ride_wind_empty_message)
+                refreshRideStatusMessage()
             }
         })
+    }
+
+    private fun initializeHudState() {
+        speedValue = getString(R.string.ride_speed_loading)
+        speedMessage = getString(R.string.ride_map_location_loading_message)
+        locationCardValue = getString(R.string.ride_location_loading_value)
+        locationCardMessage = getString(R.string.ride_map_location_loading_message)
+        weatherValue = getString(R.string.ride_weather_loading_value)
+        weatherMessage = getString(R.string.ride_weather_loading_message)
+        weatherStale = false
+        windValue = getString(R.string.ride_wind_loading_value)
+        windMessage = getString(R.string.ride_wind_loading_message)
+        policyLabel = getString(R.string.ride_policy_pending_label)
+        policyDetail = getString(R.string.ride_policy_loading_message)
+        policyTextColorResId = R.color.info_text
+        policyBanner = null
+    }
+
+    private fun refreshLocationHudState() {
+        val state = RideLocationHudStateResolver.resolve(
+            permissionState == PermissionState.GRANTED,
+            latestLocation != null,
+            hasLocationQualityIssue,
+            getString(permissionState.messageRes),
+            getString(R.string.ride_map_location_loading_message),
+            getString(R.string.location_quality_low_message),
+        )
+        locationCardValue = state.value
+        locationCardMessage = state.message.orEmpty()
+    }
+
+    private fun applyPolicyUiState(ui: com.bikeprojectminji.bikefront.ridepolicy.RidePolicyUiModel) {
+        policyLabel = ui.stateLabel
+        policyDetail = ui.message
+        policyTextColorResId = ui.stateTextColorResId
+        policyBanner = ui.bannerMessage.takeIf { ui.isShowBanner && it.isNotBlank() }
+        refreshRideStatusMessage()
+    }
+
+    private fun refreshRideStatusMessage() {
+        if (isSaving) return
+
+        val defaultMessage = when {
+            startedAt != null && !isRiding -> completeStatusMessage()
+            isRiding -> activeStatusMessage()
+            else -> readyStatusMessage()
+        }
+        val policyPendingMessage = if (policyLabel == getString(R.string.ride_policy_pending_label)) {
+            policyDetail
+        } else {
+            null
+        }
+
+        statusMessage = RideStatusMessageResolver.resolve(
+            defaultMessage,
+            policyBanner,
+            policyPendingMessage,
+            getString(R.string.ride_policy_loading_message),
+            speedMessage,
+            getString(R.string.ride_speed_message_default),
+            weatherMessage,
+            getString(R.string.ride_weather_message_default),
+        )
     }
 
     private fun calculateDistanceMeters(): Int {
@@ -741,8 +903,18 @@ private fun RideScreen(
     isRiding: Boolean,
     isSaving: Boolean,
     statusMessage: String,
-    weatherSummary: String,
-    policySummary: String,
+    speedValue: String,
+    speedMessage: String,
+    locationCardValue: String,
+    locationCardMessage: String,
+    weatherValue: String,
+    weatherMessage: String,
+    weatherStale: Boolean,
+    windValue: String,
+    windMessage: String,
+    policyLabel: String,
+    policyDetail: String,
+    @ColorRes policyTextColorResId: Int,
     policyBanner: String?,
     mapViewSavedState: Bundle?,
     canSaveRecord: Boolean,
@@ -756,6 +928,7 @@ private fun RideScreen(
     onMapReady: (MapView) -> Unit,
 ) {
     val context = LocalContext.current
+    val policyTextColor = colorResourceCompat(policyTextColorResId)
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF09111C))) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -777,85 +950,258 @@ private fun RideScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = Color(0xAA101826), shape = RoundedCornerShape(24.dp)) {
-                    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
-                        }
-                        Column(modifier = Modifier.padding(end = 12.dp)) {
-                            Text(screenTitle, color = Color.White, style = MaterialTheme.typography.titleMedium)
-                            Text(statusMessage, color = Color(0xFFD0D5DD), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-                Surface(color = Color(0xAA101826), shape = CircleShape) {
-                    IconButton(onClick = onCenterMyLocation, enabled = latestLocation != null) {
-                        Icon(Icons.Outlined.MyLocation, contentDescription = "내 위치", tint = Color.White)
-                    }
-                }
-            }
+            RideTopBar(
+                screenTitle = screenTitle,
+                statusMessage = statusMessage,
+                latestLocation = latestLocation,
+                onBack = onBack,
+                onCenterMyLocation = onCenterMyLocation,
+            )
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (permissionState != FreeRideActivity.PermissionState.GRANTED) {
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xCC101826))) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("위치 권한", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResourceCompat(permissionState.messageRes), color = Color(0xFFD0D5DD))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(onClick = onRequestPermission) { Text("권한 요청") }
-                                OutlinedButton(onClick = onOpenSettings) { Text("설정") }
-                            }
-                        }
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    MiniHudCard(modifier = Modifier.weight(1f), title = "모드", value = if (isRiding) rideMode.name else "대기")
-                    MiniHudCard(modifier = Modifier.weight(1f), title = "날씨", value = weatherSummary)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    MiniHudCard(
-                        modifier = Modifier.weight(1f),
-                        title = "위치",
-                        value = latestLocation?.let { "${it.latitude.format(4)}, ${it.longitude.format(4)}" } ?: "대기 중",
+                    RidePermissionBlockCard(
+                        permissionMessage = stringResourceCompat(permissionState.messageRes),
+                        onRequestPermission = onRequestPermission,
+                        onOpenSettings = onOpenSettings,
                     )
-                    MiniHudCard(modifier = Modifier.weight(1f), title = "정책", value = policySummary)
                 }
 
-                if (!policyBanner.isNullOrBlank()) {
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xCCFEE4E2))) {
-                        Text(text = policyBanner, modifier = Modifier.padding(14.dp), color = Color(0xFFB42318))
-                    }
-                }
+                RideHudSection(
+                    speedValue = speedValue,
+                    speedMessage = speedMessage,
+                    policyLabel = policyLabel,
+                    policyDetail = policyDetail,
+                    policyTextColor = policyTextColor,
+                    weatherValue = weatherValue,
+                    weatherMessage = weatherMessage,
+                    weatherStale = weatherStale,
+                    windValue = windValue,
+                    windMessage = windMessage,
+                    locationCardValue = locationCardValue,
+                    locationCardMessage = locationCardMessage,
+                )
 
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xCC101826))) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (!isRiding) {
-                            Button(onClick = onStartRide, enabled = permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null, modifier = Modifier.weight(1f)) {
-                                Text(if (rideMode == RideMode.FREE_RIDE) "자유 주행 시작" else "코스 주행 시작")
-                            }
-                        } else {
-                            Button(onClick = onFinishRide, modifier = Modifier.weight(1f)) {
-                                Text("주행 종료")
-                            }
-                        }
-                        OutlinedButton(onClick = onSaveRecord, enabled = canSaveRecord, modifier = Modifier.weight(1f)) {
-                            Text(if (isSaving) "저장 중" else "기록 저장")
-                        }
-                    }
+                RideActionBar(
+                    rideMode = rideMode,
+                    isRiding = isRiding,
+                    isSaving = isSaving,
+                    canSaveRecord = canSaveRecord,
+                    permissionState = permissionState,
+                    latestLocation = latestLocation,
+                    onStartRide = onStartRide,
+                    onFinishRide = onFinishRide,
+                    onSaveRecord = onSaveRecord,
+                )
+            }
+
+        }
+
+        PolicyBannerOverlay(policyBanner = policyBanner)
+    }
+}
+
+@Composable
+private fun RideTopBar(
+    screenTitle: String,
+    statusMessage: String,
+    latestLocation: Location?,
+    onBack: () -> Unit,
+    onCenterMyLocation: () -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Surface(color = Color(0xAA101826), shape = RoundedCornerShape(24.dp)) {
+            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
                 }
+                Column(modifier = Modifier.padding(end = 12.dp)) {
+                    Text(screenTitle, color = Color.White, style = MaterialTheme.typography.titleMedium)
+                    Text(statusMessage, color = Color(0xFFD0D5DD), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        Surface(color = Color(0xAA101826), shape = CircleShape) {
+            IconButton(onClick = onCenterMyLocation, enabled = latestLocation != null) {
+                Icon(Icons.Outlined.MyLocation, contentDescription = "내 위치", tint = Color.White)
             }
         }
     }
 }
 
 @Composable
-private fun MiniHudCard(modifier: Modifier = Modifier, title: String, value: String) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color(0xB3101826))) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, color = Color(0xFFD0D5DD), style = MaterialTheme.typography.labelMedium)
-            Text(value, color = Color.White, style = MaterialTheme.typography.bodyMedium)
+private fun RidePermissionBlockCard(
+    permissionMessage: String,
+    onRequestPermission: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xCC101826)),
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                color = Color(0x1AFDB022),
+                shape = CircleShape,
+                modifier = Modifier.size(44.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("!", color = Color(0xFFFDB022), style = MaterialTheme.typography.titleMedium)
+                }
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResourceCompat(R.string.ride_location_status_title), color = Color.White, style = MaterialTheme.typography.titleMedium)
+                Text(stringResourceCompat(R.string.ride_location_status_blocked), color = Color(0xFFD0D5DD), style = MaterialTheme.typography.bodySmall)
+                Text(permissionMessage, color = Color(0xFF98A2B3), style = MaterialTheme.typography.bodySmall)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onRequestPermission) { Text(stringResourceCompat(R.string.ride_permission_retry_button)) }
+                OutlinedButton(onClick = onOpenSettings) { Text(stringResourceCompat(R.string.ride_permission_settings_button)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RideHudSection(
+    speedValue: String,
+    speedMessage: String,
+    policyLabel: String,
+    policyDetail: String,
+    policyTextColor: Color,
+    weatherValue: String,
+    weatherMessage: String,
+    weatherStale: Boolean,
+    windValue: String,
+    windMessage: String,
+    locationCardValue: String,
+    locationCardMessage: String,
+) {
+    MiniHudCard(
+        modifier = Modifier.fillMaxWidth(),
+        title = stringResourceCompat(R.string.ride_speed_card_title),
+        value = speedValue,
+        supportingText = speedMessage,
+        prominent = true,
+    )
+    MiniHudCard(
+        modifier = Modifier.fillMaxWidth(),
+        title = stringResourceCompat(R.string.ride_policy_card_title),
+        value = policyLabel,
+        supportingText = policyDetail,
+        valueColor = policyTextColor,
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        MiniHudCard(
+            modifier = Modifier.weight(1f),
+            title = stringResourceCompat(R.string.ride_weather_card_title),
+            value = weatherValue,
+            supportingText = weatherMessage,
+            statusLabel = if (weatherStale) stringResourceCompat(R.string.ride_weather_stale_message) else null,
+        )
+        MiniHudCard(
+            modifier = Modifier.weight(1f),
+            title = stringResourceCompat(R.string.ride_wind_card_title),
+            value = windValue,
+            supportingText = windMessage,
+            statusLabel = if (weatherStale) stringResourceCompat(R.string.ride_weather_stale_message) else null,
+        )
+    }
+    MiniHudCard(
+        modifier = Modifier.fillMaxWidth(),
+        title = stringResourceCompat(R.string.ride_location_card_title),
+        value = locationCardValue,
+        supportingText = locationCardMessage,
+    )
+}
+
+@Composable
+private fun RideActionBar(
+    rideMode: RideMode,
+    isRiding: Boolean,
+    isSaving: Boolean,
+    canSaveRecord: Boolean,
+    permissionState: FreeRideActivity.PermissionState,
+    latestLocation: Location?,
+    onStartRide: () -> Unit,
+    onFinishRide: () -> Unit,
+    onSaveRecord: () -> Unit,
+) {
+    Card(colors = CardDefaults.cardColors(containerColor = Color(0xCC101826))) {
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (!isRiding) {
+                Button(onClick = onStartRide, enabled = permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null, modifier = Modifier.weight(1f)) {
+                    Text(if (rideMode == RideMode.FREE_RIDE) "자유 주행 시작" else "코스 주행 시작")
+                }
+            } else {
+                Button(onClick = onFinishRide, modifier = Modifier.weight(1f)) {
+                    Text("주행 종료")
+                }
+            }
+            OutlinedButton(onClick = onSaveRecord, enabled = canSaveRecord, modifier = Modifier.weight(1f)) {
+                Text(if (isSaving) "저장 중" else "기록 저장")
+            }
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.PolicyBannerOverlay(policyBanner: String?) {
+    if (policyBanner.isNullOrBlank()) return
+
+    Card(
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(start = 16.dp, end = 16.dp, bottom = 276.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xCCFEE4E2)),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Text(
+            text = policyBanner,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            color = Color(0xFFB42318),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
+@Composable
+private fun MiniHudCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    value: String,
+    supportingText: String? = null,
+    statusLabel: String? = null,
+    valueColor: Color = Color.White,
+    prominent: Boolean = false,
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = if (prominent) Color(0xCC101826) else Color(0xB3101826)),
+        shape = RoundedCornerShape(if (prominent) 28.dp else 20.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = if (prominent) 18.dp else 14.dp, vertical = if (prominent) 18.dp else 14.dp),
+            verticalArrangement = Arrangement.spacedBy(if (prominent) 10.dp else 6.dp),
+        ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(title, color = Color(0xFFD0D5DD), style = MaterialTheme.typography.labelMedium)
+                if (!statusLabel.isNullOrBlank()) {
+                    Text(statusLabel, color = Color(0xFFFDB022), style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            Text(
+                value,
+                color = valueColor,
+                style = if (prominent) MaterialTheme.typography.displaySmall else MaterialTheme.typography.bodyMedium,
+            )
+            if (!supportingText.isNullOrBlank()) {
+                Text(supportingText, color = Color(0xFFD0D5DD), style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
@@ -864,6 +1210,9 @@ private fun Double.format(digits: Int): String = String.format("%.${digits}f", t
 
 @Composable
 private fun stringResourceCompat(@StringRes id: Int): String = LocalContext.current.getString(id)
+
+@Composable
+private fun colorResourceCompat(@ColorRes id: Int): Color = Color(ContextCompat.getColor(LocalContext.current, id))
 
 private fun Bundle.readLocationCompat(key: String): Location? {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
