@@ -72,6 +72,7 @@ import com.bikeprojectminji.bikefront.ui.theme.BikeFrontTheme
 import com.bikeprojectminji.bikefront.weather.CurrentWeatherGateway
 import com.bikeprojectminji.bikefront.weather.HttpCurrentWeatherGateway
 import com.bikeprojectminji.bikefront.weather.WeatherHudValueFormatter
+import com.bikeprojectminji.bikefront.weather.WeatherRetentionPolicy
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -125,6 +126,7 @@ class FreeRideActivity : ComponentActivity() {
         private const val KEY_WEATHER_STALE = "key_weather_stale"
         private const val KEY_WIND_VALUE = "key_wind_value"
         private const val KEY_WIND_MESSAGE = "key_wind_message"
+        private const val KEY_LAST_WEATHER_SUCCESS_AT = "key_last_weather_success_at"
         private const val KEY_POLICY_LABEL = "key_policy_label"
         private const val KEY_POLICY_DETAIL = "key_policy_detail"
         private const val KEY_POLICY_TEXT_COLOR = "key_policy_text_color"
@@ -142,6 +144,7 @@ class FreeRideActivity : ComponentActivity() {
         private const val ACTIVE_POLICY_REEVALUATION_DISTANCE_M = 15f
         private const val WEATHER_REFRESH_INTERVAL_MS = 300_000L
         private const val WEATHER_REFRESH_DISTANCE_M = 1_000f
+        private const val WEATHER_LAST_SUCCESS_RETENTION_MS = 60 * 60 * 1000L
 
         fun newFreeRideIntent(context: Context): Intent {
             return Intent(context, FreeRideActivity::class.java)
@@ -182,6 +185,7 @@ class FreeRideActivity : ComponentActivity() {
     private var weatherStale by mutableStateOf(false)
     private var windValue by mutableStateOf("--")
     private var windMessage by mutableStateOf("")
+    private var lastWeatherSuccessAtMillis: Long = 0L
     private var policyLabel by mutableStateOf("정책 없음")
     private var policyDetail by mutableStateOf("")
     private var policyTextColorResId by mutableStateOf(R.color.info_text)
@@ -345,6 +349,7 @@ class FreeRideActivity : ComponentActivity() {
         outState.putBoolean(KEY_WEATHER_STALE, weatherStale)
         outState.putString(KEY_WIND_VALUE, windValue)
         outState.putString(KEY_WIND_MESSAGE, windMessage)
+        outState.putLong(KEY_LAST_WEATHER_SUCCESS_AT, lastWeatherSuccessAtMillis)
         outState.putString(KEY_POLICY_LABEL, policyLabel)
         outState.putString(KEY_POLICY_DETAIL, policyDetail)
         outState.putInt(KEY_POLICY_TEXT_COLOR, policyTextColorResId)
@@ -385,6 +390,7 @@ class FreeRideActivity : ComponentActivity() {
         weatherStale = savedInstanceState.getBoolean(KEY_WEATHER_STALE, weatherStale)
         windValue = savedInstanceState.getString(KEY_WIND_VALUE).orEmpty().ifBlank { windValue }
         windMessage = savedInstanceState.getString(KEY_WIND_MESSAGE).orEmpty().ifBlank { windMessage }
+        lastWeatherSuccessAtMillis = savedInstanceState.getLong(KEY_LAST_WEATHER_SUCCESS_AT, lastWeatherSuccessAtMillis)
         policyLabel = savedInstanceState.getString(KEY_POLICY_LABEL).orEmpty().ifBlank { policyLabel }
         policyDetail = savedInstanceState.getString(KEY_POLICY_DETAIL).orEmpty().ifBlank { policyDetail }
         policyTextColorResId = savedInstanceState.getInt(KEY_POLICY_TEXT_COLOR, policyTextColorResId)
@@ -409,6 +415,7 @@ class FreeRideActivity : ComponentActivity() {
             }
         }
         mapViewState = savedInstanceState.getBundle(KEY_MAP_VIEW_STATE)
+        expireRetainedWeatherIfNeeded()
         refreshLocationHudState()
         refreshRideStatusMessage()
     }
@@ -722,39 +729,23 @@ class FreeRideActivity : ComponentActivity() {
         currentWeatherGateway.loadCurrent(location.latitude, location.longitude, object : CurrentWeatherGateway.Callback {
             override fun onSuccess(result: CurrentWeatherGateway.WeatherResult) {
                 weatherRequestInFlight = false
-                weatherValue = WeatherHudValueFormatter.formatTemperature(result.temperatureC)
-                weatherMessage = if (WeatherHudValueFormatter.shouldShowStale(result.isStale)) {
-                    getString(R.string.ride_weather_stale_message)
-                } else {
-                    getString(R.string.ride_weather_message_default)
-                }
-                weatherStale = result.isStale
-                windValue = WeatherHudValueFormatter.formatWind(result.windDirectionText, result.windSpeedKmh)
-                windMessage = if (WeatherHudValueFormatter.shouldShowStale(result.isStale)) {
-                    getString(R.string.ride_weather_stale_message)
-                } else {
-                    getString(R.string.ride_wind_message_default)
-                }
+                applyWeatherSuccess(result)
                 refreshRideStatusMessage()
             }
 
             override fun onEmpty() {
                 weatherRequestInFlight = false
-                weatherValue = getString(R.string.ride_weather_empty_value)
-                weatherMessage = getString(R.string.ride_weather_empty_message)
-                weatherStale = false
-                windValue = getString(R.string.ride_wind_empty_value)
-                windMessage = getString(R.string.ride_wind_empty_message)
+                if (!retainLastSuccessfulWeather()) {
+                    applyWeatherUnavailable()
+                }
                 refreshRideStatusMessage()
             }
 
             override fun onFailure(message: String) {
                 weatherRequestInFlight = false
-                weatherValue = getString(R.string.ride_weather_empty_value)
-                weatherMessage = message
-                weatherStale = false
-                windValue = getString(R.string.ride_wind_empty_value)
-                windMessage = getString(R.string.ride_wind_empty_message)
+                if (!retainLastSuccessfulWeather()) {
+                    applyWeatherUnavailable()
+                }
                 refreshRideStatusMessage()
             }
         })
@@ -770,6 +761,7 @@ class FreeRideActivity : ComponentActivity() {
         weatherStale = false
         windValue = getString(R.string.ride_wind_loading_value)
         windMessage = getString(R.string.ride_wind_loading_message)
+        lastWeatherSuccessAtMillis = 0L
         policyLabel = getString(R.string.ride_policy_pending_label)
         policyDetail = getString(R.string.ride_policy_loading_message)
         policyTextColorResId = R.color.info_text
@@ -805,6 +797,10 @@ class FreeRideActivity : ComponentActivity() {
             isRiding -> activeStatusMessage()
             else -> readyStatusMessage()
         }
+        if (!policyBanner.isNullOrBlank()) {
+            statusMessage = defaultMessage
+            return
+        }
         val policyPendingMessage = if (policyLabel == getString(R.string.ride_policy_pending_label)) {
             policyDetail
         } else {
@@ -813,7 +809,6 @@ class FreeRideActivity : ComponentActivity() {
 
         statusMessage = RideStatusMessageResolver.resolve(
             defaultMessage,
-            policyBanner,
             policyPendingMessage,
             getString(R.string.ride_policy_loading_message),
             speedMessage,
@@ -821,6 +816,60 @@ class FreeRideActivity : ComponentActivity() {
             weatherMessage,
             getString(R.string.ride_weather_message_default),
         )
+    }
+
+    private fun applyWeatherSuccess(result: CurrentWeatherGateway.WeatherResult) {
+        weatherValue = WeatherHudValueFormatter.formatTemperature(result.temperatureC)
+        weatherMessage = getString(R.string.ride_weather_message_default)
+        weatherStale = WeatherHudValueFormatter.shouldShowStale(result.isStale)
+        windValue = WeatherHudValueFormatter.formatWind(result.windDirectionText, result.windSpeedKmh)
+        windMessage = getString(R.string.ride_wind_message_default)
+        lastWeatherSuccessAtMillis = System.currentTimeMillis()
+    }
+
+    private fun applyWeatherUnavailable() {
+        weatherValue = getString(R.string.ride_weather_empty_value)
+        weatherMessage = getString(R.string.ride_weather_empty_message)
+        weatherStale = false
+        windValue = getString(R.string.ride_wind_empty_value)
+        windMessage = getString(R.string.ride_wind_empty_message)
+        lastWeatherSuccessAtMillis = 0L
+    }
+
+    private fun retainLastSuccessfulWeather(): Boolean {
+        val elapsedMillis = System.currentTimeMillis() - lastWeatherSuccessAtMillis
+        val canRetain = WeatherRetentionPolicy.canRetainLastSuccess(
+            lastWeatherSuccessAtMillis > 0L,
+            elapsedMillis,
+            WEATHER_LAST_SUCCESS_RETENTION_MS,
+        )
+        if (!canRetain) {
+            return false
+        }
+        weatherStale = true
+        weatherMessage = getString(R.string.ride_weather_message_default)
+        windMessage = getString(R.string.ride_wind_message_default)
+        return true
+    }
+
+    private fun expireRetainedWeatherIfNeeded() {
+        if (lastWeatherSuccessAtMillis <= 0L) {
+            return
+        }
+        if (WeatherRetentionPolicy.canRetainLastSuccess(
+                true,
+                System.currentTimeMillis() - lastWeatherSuccessAtMillis,
+                WEATHER_LAST_SUCCESS_RETENTION_MS,
+            )
+        ) {
+            weatherMessage = getString(R.string.ride_weather_message_default)
+            windMessage = getString(R.string.ride_wind_message_default)
+            return
+        }
+        if (weatherValue == getString(R.string.ride_weather_empty_value) && windValue == getString(R.string.ride_wind_empty_value)) {
+            return
+        }
+        applyWeatherUnavailable()
     }
 
     private fun calculateDistanceMeters(): Int {
