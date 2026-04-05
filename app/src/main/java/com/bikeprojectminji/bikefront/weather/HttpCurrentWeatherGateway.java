@@ -64,7 +64,13 @@ public class HttpCurrentWeatherGateway implements CurrentWeatherGateway {
             JSONObject root = new JSONObject(responseBody);
 
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                throw new Exception(root.optString("message", FALLBACK_ERROR_MESSAGE));
+                if (WeatherHttpErrorPolicy.shouldTreatAsEmpty(responseCode)) {
+                    return null;
+                }
+                throw new Exception(WeatherHttpErrorPolicy.resolveFailureMessage(
+                        root.optString("message", FALLBACK_ERROR_MESSAGE),
+                        FALLBACK_ERROR_MESSAGE
+                ));
             }
 
             if (root.isNull("data")) {
