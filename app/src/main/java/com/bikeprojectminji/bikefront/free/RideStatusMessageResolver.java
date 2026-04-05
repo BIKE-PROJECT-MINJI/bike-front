@@ -7,7 +7,6 @@ public final class RideStatusMessageResolver {
 
     public static String resolve(
             String defaultMessage,
-            String policyBannerMessage,
             String policyPendingMessage,
             String defaultPolicyPendingMessage,
             String speedMessage,
@@ -15,9 +14,6 @@ public final class RideStatusMessageResolver {
             String weatherMessage,
             String defaultWeatherMessage
     ) {
-        if (isMeaningful(policyBannerMessage)) {
-            return policyBannerMessage;
-        }
         if (isMeaningful(policyPendingMessage) && !policyPendingMessage.equals(defaultPolicyPendingMessage)) {
             return policyPendingMessage;
         }
