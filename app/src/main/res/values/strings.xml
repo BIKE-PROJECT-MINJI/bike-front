@@ -67,6 +67,11 @@
     <string name="ride_speed_card_title">속도</string>
     <string name="ride_speed_loading">--</string>
     <string name="ride_speed_message_default">현재 속도를 표시합니다.</string>
+    <string name="ride_location_card_title">위치</string>
+    <string name="ride_location_loading_value">확인 중</string>
+    <string name="ride_location_permission_value">권한 필요</string>
+    <string name="ride_location_ready_value">위치 확보됨</string>
+    <string name="location_quality_low_message">현재 위치 정보가 불안정합니다.</string>
     <string name="ride_weather_card_title">기온</string>
     <string name="ride_weather_loading_value">--</string>
     <string name="ride_weather_loading_message">날씨를 확인하는 중입니다.</string>
