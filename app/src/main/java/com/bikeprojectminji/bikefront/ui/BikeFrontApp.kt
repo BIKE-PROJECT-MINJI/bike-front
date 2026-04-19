@@ -2,20 +2,11 @@ package com.bikeprojectminji.bikefront.ui
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.DirectionsBike
-import androidx.compose.material.icons.automirrored.outlined.ListAlt
-import androidx.compose.material.icons.filled.DirectionsBike
-import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -30,13 +21,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.outlined.DirectionsBike
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -49,7 +46,16 @@ import com.bikeprojectminji.bikefront.ui.screen.CourseCardUiModel
 import com.bikeprojectminji.bikefront.ui.screen.FreeRidePreRideScreen
 import com.bikeprojectminji.bikefront.ui.screen.MyInfoScreen
 import com.bikeprojectminji.bikefront.ui.screen.RideStartScreen
+import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 
+// ============================================================================
+// GAJA App Shell - Material 3 Navigation
+// Main navigation structure with bottom navigation bar
+// ============================================================================
+
+/**
+ * Navigation tab definition with Material Icons
+ */
 private enum class MainTab(
     val route: String,
     val label: String,
@@ -59,14 +65,14 @@ private enum class MainTab(
     RIDE_START(
         route = "ride_start",
         label = "라이딩",
-        selectedIcon = Icons.Filled.DirectionsBike,
+        selectedIcon = Icons.AutoMirrored.Filled.DirectionsBike,
         unselectedIcon = Icons.AutoMirrored.Outlined.DirectionsBike,
     ),
     COURSES(
         route = "courses",
         label = "코스",
-        selectedIcon = Icons.Filled.ListAlt,
-        unselectedIcon = Icons.AutoMirrored.Outlined.ListAlt,
+        selectedIcon = Icons.AutoMirrored.Filled.List,
+        unselectedIcon = Icons.AutoMirrored.Outlined.List,
     ),
     MY_INFO(
         route = "my_info",
@@ -76,6 +82,9 @@ private enum class MainTab(
     ),
 }
 
+/**
+ * Navigation routes for detail screens
+ */
 private object Routes {
     const val FREE_RIDE_PRE_RIDE = "free_ride_pre_ride"
     const val COURSE_PRE_RIDE = "course_pre_ride/{courseId}/{title}/{distanceKm}/{durationMin}"
@@ -85,6 +94,10 @@ private object Routes {
     }
 }
 
+/**
+ * Main app composable with Material 3 navigation shell.
+ * Provides bottom navigation and navigation host for all screens.
+ */
 @Composable
 fun BikeFrontApp() {
     val navController = rememberNavController()
@@ -97,20 +110,26 @@ fun BikeFrontApp() {
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            // GAJA-styled bottom navigation with shadow
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(
+                        start = GajaSpacing.Large,
+                        end = GajaSpacing.Large,
+                        top = 4.dp,
+                        bottom = GajaSpacing.ExtraSmall,
+                    )
                     .shadow(
                         elevation = 16.dp,
-                        spotColor = Color(0x15000000),
+                        spotColor = Color(0x14000000),
                     ),
+                shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,
             ) {
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = Color.Transparent,
                     tonalElevation = 0.dp,
-                    modifier = Modifier.height(72.dp),
+                    modifier = Modifier.height(78.dp),
                 ) {
                     tabs.forEach { tab ->
                         val selected = currentRoute == tab.route
@@ -129,13 +148,13 @@ fun BikeFrontApp() {
                                 Icon(
                                     imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
                                     contentDescription = tab.label,
-                                    modifier = Modifier.size(26.dp),
+                                    modifier = Modifier.size(24.dp),
                                 )
                             },
                             label = {
                                 Text(
                                     text = tab.label,
-                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
@@ -143,7 +162,7 @@ fun BikeFrontApp() {
                                 selectedTextColor = MaterialTheme.colorScheme.primary,
                                 unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
                             ),
                         )
                     }
@@ -159,12 +178,8 @@ fun BikeFrontApp() {
             composable(MainTab.RIDE_START.route) {
                 RideStartScreen(
                     innerPadding = innerPadding,
-                    onOpenFreeRide = { navController.navigate(Routes.FREE_RIDE_PRE_RIDE) },
+                    onStartFreeRide = { navController.navigate(Routes.FREE_RIDE_PRE_RIDE) },
                     onOpenCourse = { navController.navigate(Routes.coursePreRide(it)) },
-                    onOpenCourses = { navController.navigate(MainTab.COURSES.route) },
-                    onOpenProfile = {
-                        context.startActivity(Intent(context, AuthProfileActivity::class.java))
-                    },
                 )
             }
             composable(MainTab.COURSES.route) {
