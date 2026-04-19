@@ -86,7 +86,7 @@ fun FreeRidePreRideScreen(
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
-                        text = "코스 없이 바로 기록하는 모드입니다. 지도/포인터/저장 흐름은 다음 구현 단계에서 연결합니다.",
+                        text = "코스 없이 바로 기록하는 모드입니다. 위치를 확보하면 ride 화면으로 진입하고 종료 후 기록 저장 흐름으로 이어집니다.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

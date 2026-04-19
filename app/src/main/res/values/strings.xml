@@ -26,7 +26,6 @@
     <string name="featured_course_distance_km_format">거리 %.1fkm</string>
     <string name="ride_screen_title">ride</string>
     <string name="ride_screen_title_phase2">주행</string>
-    <string name="ride_placeholder_message">위치 권한과 주행 화면 상세는 다음 단계에서 연결됩니다.</string>
     <string name="ride_permission_message">현재 위치 기반 기능을 사용하려면 위치 권한이 필요합니다.</string>
     <string name="ride_permission_settings_message">위치 권한이 꺼져 있습니다. 설정에서 권한을 허용해 주세요.</string>
     <string name="ride_permission_resuming_message">위치를 다시 확인하는 중입니다.</string>
