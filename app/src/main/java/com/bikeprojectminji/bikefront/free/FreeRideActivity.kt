@@ -826,40 +826,54 @@ private fun RideScreen(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small), modifier = Modifier.fillMaxWidth()) {
-                    FloatingHudChip(title = "추적", value = if (isRiding) "기록 중" else "대기", modifier = Modifier.weight(1f))
-                    FloatingHudChip(title = "GPS", value = if (permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null) "연결됨" else "확인 중", modifier = Modifier.weight(1f))
-                }
-
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = hudPanelStrongColor,
                     shape = MaterialTheme.shapes.extraLarge,
                     border = androidx.compose.foundation.BorderStroke(1.dp, hudBorderColor),
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = GajaSpacing.CardPadding, vertical = GajaSpacing.Medium),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = if (isRiding) "현재 속도" else "출발 준비",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                        Text(
-                            text = if (isRiding) "24.5" else "0.0",
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.displayLarge,
-                        )
-                        Text(
-                            text = if (isRiding) "km/h" else "km/h 대기",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        GpsPill(text = if (permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null) "GPS 신호 양호" else "GPS 확인 중")
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Text(
+                                text = if (isRiding) "라이딩 진행 중" else "출발 준비",
+                                color = MaterialTheme.colorScheme.inverseOnSurface,
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small)) {
+                                FloatingHudChip(title = "추적", value = if (isRiding) "기록 중" else "대기")
+                                FloatingHudChip(title = "GPS", value = if (permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null) "연결됨" else "확인 중")
+                            }
+                            GpsPill(text = if (permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null) "GPS 신호 양호" else "GPS 확인 중")
+                        }
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = if (isRiding) "속도" else "현재 상태",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                            Text(
+                                text = if (isRiding) "24.5" else "READY",
+                                color = MaterialTheme.colorScheme.primary,
+                                style = if (isRiding) MaterialTheme.typography.displayMedium else MaterialTheme.typography.headlineMedium,
+                            )
+                            Text(
+                                text = if (isRiding) "km/h" else "탭하여 시작",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
                     }
                 }
             }
@@ -897,11 +911,6 @@ private fun RideScreen(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small), modifier = Modifier.fillMaxWidth()) {
-                    MinimalHudPanel(modifier = Modifier.weight(1f), title = "날씨", value = weatherSummary)
-                    MinimalHudPanel(modifier = Modifier.weight(1f), title = "정책", value = policySummary)
-                }
-
                 if (!policyBanner.isNullOrBlank()) {
                     Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.medium) {
                         Text(
@@ -918,44 +927,53 @@ private fun RideScreen(
                     shape = MaterialTheme.shapes.large,
                     border = androidx.compose.foundation.BorderStroke(1.dp, hudBorderColor),
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth().padding(GajaSpacing.Medium),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        if (!isRiding) {
-                            Button(
-                                onClick = onStartRide,
-                                enabled = permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null,
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                            ) {
-                                Text(if (rideMode == RideMode.FREE_RIDE) "주행 시작" else "코스 시작")
-                            }
-                        } else {
-                            Button(
-                                onClick = onFinishRide,
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiary,
-                                    contentColor = MaterialTheme.colorScheme.onTertiary,
-                                ),
-                            ) {
-                                Text("주행 종료")
-                            }
+                        Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small), modifier = Modifier.fillMaxWidth()) {
+                            MinimalHudPanel(modifier = Modifier.weight(1f), title = "날씨", value = weatherSummary)
+                            MinimalHudPanel(modifier = Modifier.weight(1f), title = "정책", value = policySummary)
                         }
-                        OutlinedButton(
-                            onClick = onSaveRecord,
-                            enabled = canSaveRecord,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-                            ),
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(if (isSaving) "저장 중" else "기록 저장")
+                            if (!isRiding) {
+                                Button(
+                                    onClick = onStartRide,
+                                    enabled = permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null,
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    ),
+                                ) {
+                                    Text(if (rideMode == RideMode.FREE_RIDE) "주행 시작" else "코스 시작")
+                                }
+                            } else {
+                                Button(
+                                    onClick = onFinishRide,
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.tertiary,
+                                        contentColor = MaterialTheme.colorScheme.onTertiary,
+                                    ),
+                                ) {
+                                    Text("주행 종료")
+                                }
+                            }
+                            OutlinedButton(
+                                onClick = onSaveRecord,
+                                enabled = canSaveRecord,
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                                ),
+                            ) {
+                                Text(if (isSaving) "저장 중" else "기록 저장")
+                            }
                         }
                     }
                 }
@@ -968,13 +986,16 @@ private fun RideScreen(
 private fun FloatingHudChip(modifier: Modifier = Modifier, title: String, value: String) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.82f),
-        shape = MaterialTheme.shapes.large,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.08f)),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f),
+        shape = RoundedCornerShape(999.dp),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.72f), style = MaterialTheme.typography.labelMedium)
-            Text(value, color = MaterialTheme.colorScheme.inverseOnSurface, style = MaterialTheme.typography.headlineSmall)
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(title, color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.72f), style = MaterialTheme.typography.labelSmall)
+            Text(value, color = MaterialTheme.colorScheme.inverseOnSurface, style = MaterialTheme.typography.labelLarge)
         }
     }
 }
