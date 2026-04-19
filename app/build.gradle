@@ -3,9 +3,22 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+import java.util.Properties
+
 configurations.configureEach {
     exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
     exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+}
+
+def quote = { value -> "\"${value}\"" }
+def debugApiBaseUrl = providers.gradleProperty("debugApiBaseUrl").orElse("http://10.0.2.2:8080").get()
+def releaseApiBaseUrl = providers.gradleProperty("releaseApiBaseUrl").orElse("https://bike-back-production.up.railway.app").get()
+def signingPropsFile = rootProject.file("signing.local.properties")
+def signingProps = new Properties()
+def hasLocalSigning = signingPropsFile.exists()
+
+if (hasLocalSigning) {
+    signingPropsFile.withInputStream { signingProps.load(it) }
 }
 
 android {
@@ -22,16 +35,30 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasLocalSigning) {
+            release {
+                storeFile rootProject.file(signingProps["storeFile"])
+                storePassword signingProps["storePassword"]
+                keyAlias signingProps["keyAlias"]
+                keyPassword signingProps["keyPassword"]
+            }
+        }
+    }
+
     buildTypes {
         debug {
-            buildConfigField 'String', 'API_BASE_URL', '"http://10.0.2.2:8080"'
+            buildConfigField 'String', 'API_BASE_URL', quote(debugApiBaseUrl)
             manifestPlaceholders = [usesCleartextTraffic: "true"]
         }
         release {
-            buildConfigField 'String', 'API_BASE_URL', '"https://api.example.invalid"'
+            buildConfigField 'String', 'API_BASE_URL', quote(releaseApiBaseUrl)
             manifestPlaceholders = [usesCleartextTraffic: "false"]
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasLocalSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 

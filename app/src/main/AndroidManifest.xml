@@ -12,16 +12,13 @@
         android:theme="@style/Theme.BikeFront"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
         <activity
-            android:name=".course.CourseEditorActivity"
-            android:exported="false" />
-        <activity
             android:name=".free.FreeRideActivity"
             android:exported="false" />
         <activity
             android:name=".auth.AuthProfileActivity"
             android:exported="false" />
         <activity
-            android:name=".RideEntryActivity"
+            android:name=".course.CourseEditorActivity"
             android:exported="false" />
         <activity
             android:name=".MainActivity"

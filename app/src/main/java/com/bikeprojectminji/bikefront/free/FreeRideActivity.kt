@@ -65,6 +65,7 @@ import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyEvaluationGateway
 import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyUiMapper
 import com.bikeprojectminji.bikefront.ui.model.RideMode
 import com.bikeprojectminji.bikefront.ui.theme.BikeFrontTheme
+import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 import com.bikeprojectminji.bikefront.weather.CurrentWeatherGateway
 import com.bikeprojectminji.bikefront.weather.HttpCurrentWeatherGateway
 import org.maplibre.android.MapLibre
@@ -756,7 +757,7 @@ private fun RideScreen(
     onMapReady: (MapView) -> Unit,
 ) {
     val context = LocalContext.current
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF09111C))) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.inverseSurface)) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = {
@@ -774,66 +775,131 @@ private fun RideScreen(
                 .statusBarsPadding()
                 .safeDrawingPadding()
                 .navigationBarsPadding()
-                .padding(16.dp),
+                .padding(horizontal = GajaSpacing.ScreenPadding, vertical = GajaSpacing.Medium),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = Color(0xAA101826), shape = RoundedCornerShape(24.dp)) {
-                    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "뒤로")
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
+                        shape = MaterialTheme.shapes.large,
+                    ) {
+                        Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    Icons.AutoMirrored.Outlined.ArrowBack,
+                                    contentDescription = "뒤로",
+                                    tint = MaterialTheme.colorScheme.inverseOnSurface,
+                                )
+                            }
+                            Column(modifier = Modifier.padding(end = GajaSpacing.Medium)) {
+                                Text(
+                                    screenTitle,
+                                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Text(
+                                    statusMessage,
+                                    color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.88f),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
                         }
-                        Column(modifier = Modifier.padding(end = 12.dp)) {
-                            Text(screenTitle, color = Color.White, style = MaterialTheme.typography.titleMedium)
-                            Text(statusMessage, color = Color(0xFFD0D5DD), style = MaterialTheme.typography.bodySmall)
+                    }
+                    Surface(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.18f), shape = CircleShape) {
+                        IconButton(onClick = onCenterMyLocation) {
+                            Icon(
+                                Icons.Outlined.MyLocation,
+                                contentDescription = "내 위치",
+                                tint = MaterialTheme.colorScheme.inverseOnSurface,
+                            )
                         }
                     }
                 }
-                Surface(color = Color(0xAA101826), shape = CircleShape) {
-                    IconButton(onClick = onCenterMyLocation, enabled = latestLocation != null) {
-                        Icon(Icons.Outlined.MyLocation, contentDescription = "내 위치", tint = Color.White)
+
+                Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small), modifier = Modifier.fillMaxWidth()) {
+                    FloatingHudChip(title = "풍향", value = "NW", modifier = Modifier.weight(1f))
+                    FloatingHudChip(title = "풍속", value = "12m/s", modifier = Modifier.weight(1f))
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+                    shape = MaterialTheme.shapes.extraLarge,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = GajaSpacing.CardPadding, vertical = GajaSpacing.Medium),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = if (isRiding) "현재 속도" else "출발 준비",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Text(
+                            text = if (isRiding) "24.5" else "0.0",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.displayLarge,
+                        )
+                        Text(
+                            text = if (isRiding) "km/h" else "km/h 대기",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        GpsPill(text = if (permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null) "GPS 신호 양호" else "GPS 확인 중")
                     }
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small)) {
                 if (permissionState != FreeRideActivity.PermissionState.GRANTED) {
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xCC101826))) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("위치 권한", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResourceCompat(permissionState.messageRes), color = Color(0xFFD0D5DD))
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
+                        shape = MaterialTheme.shapes.large,
+                    ) {
+                        Column(modifier = Modifier.padding(GajaSpacing.Medium), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("위치 권한 필요", color = MaterialTheme.colorScheme.inverseOnSurface, style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "주행을 시작하려면 위치 권한을 허용해 주세요.",
+                                color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.88f),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(onClick = onRequestPermission) { Text("권한 요청") }
-                                OutlinedButton(onClick = onOpenSettings) { Text("설정") }
+                                OutlinedButton(onClick = onOpenSettings) { Text("설정 열기") }
                             }
                         }
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    MiniHudCard(modifier = Modifier.weight(1f), title = "모드", value = if (isRiding) rideMode.name else "대기")
-                    MiniHudCard(modifier = Modifier.weight(1f), title = "날씨", value = weatherSummary)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    MiniHudCard(
-                        modifier = Modifier.weight(1f),
-                        title = "위치",
-                        value = latestLocation?.let { "${it.latitude.format(4)}, ${it.longitude.format(4)}" } ?: "대기 중",
-                    )
-                    MiniHudCard(modifier = Modifier.weight(1f), title = "정책", value = policySummary)
+                Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small), modifier = Modifier.fillMaxWidth()) {
+                    MinimalHudPanel(modifier = Modifier.weight(1f), title = "날씨", value = weatherSummary)
+                    MinimalHudPanel(modifier = Modifier.weight(1f), title = "정책", value = policySummary)
                 }
 
                 if (!policyBanner.isNullOrBlank()) {
-                    Card(colors = CardDefaults.cardColors(containerColor = Color(0xCCFEE4E2))) {
-                        Text(text = policyBanner, modifier = Modifier.padding(14.dp), color = Color(0xFFB42318))
+                    Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.medium) {
+                        Text(
+                            text = policyBanner,
+                            modifier = Modifier.padding(14.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                 }
 
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xCC101826))) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Surface(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f), shape = MaterialTheme.shapes.large) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(GajaSpacing.Medium),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         if (!isRiding) {
                             Button(onClick = onStartRide, enabled = permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null, modifier = Modifier.weight(1f)) {
-                                Text(if (rideMode == RideMode.FREE_RIDE) "자유 주행 시작" else "코스 주행 시작")
+                                Text(if (rideMode == RideMode.FREE_RIDE) "주행 시작" else "코스 시작")
                             }
                         } else {
                             Button(onClick = onFinishRide, modifier = Modifier.weight(1f)) {
@@ -851,12 +917,42 @@ private fun RideScreen(
 }
 
 @Composable
-private fun MiniHudCard(modifier: Modifier = Modifier, title: String, value: String) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color(0xB3101826))) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, color = Color(0xFFD0D5DD), style = MaterialTheme.typography.labelMedium)
-            Text(value, color = Color.White, style = MaterialTheme.typography.bodyMedium)
+private fun FloatingHudChip(modifier: Modifier = Modifier, title: String, value: String) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+        shape = MaterialTheme.shapes.large,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(title, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+            Text(value, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.headlineSmall)
         }
+    }
+}
+
+@Composable
+private fun MinimalHudPanel(modifier: Modifier = Modifier, title: String, value: String) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.18f),
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.88f), style = MaterialTheme.typography.labelMedium)
+            Text(value, color = MaterialTheme.colorScheme.inverseOnSurface, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
+private fun GpsPill(text: String) {
+    Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+        Text(
+            text = "• $text",
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            style = MaterialTheme.typography.labelMedium,
+        )
     }
 }
 
