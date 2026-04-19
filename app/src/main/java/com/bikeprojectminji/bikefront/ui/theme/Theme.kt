@@ -29,16 +29,16 @@ import androidx.compose.material3.Typography
 /** Primary brand colors - The core GAJA identity */
 object GajaColors {
     // Primary accents
-    val LimePrimary = Color(0xFFB8FF5A)
-    val LimeLight = Color(0xFFD7FF9E)
-    val LimeDark = Color(0xFF5D7A1F)
-    val LimeSurface = Color(0xFFE9F4D0)
+    val LimePrimary = Color(0xFF7EE2C2)
+    val LimeLight = Color(0xFFB8F2E1)
+    val LimeDark = Color(0xFF24564C)
+    val LimeSurface = Color(0xFFDDF4EC)
 
     // Background & Surfaces
-    val Background = Color(0xFFF3F0E8)
-    val Surface = Color(0xFFFFFCF6)
-    val SurfaceVariant = Color(0xFFE7E0D3)
-    val SurfaceContainer = Color(0xFFF0E8DA)
+    val Background = Color(0xFFF5F3ED)
+    val Surface = Color(0xFFFFFCF8)
+    val SurfaceVariant = Color(0xFFE7E4DB)
+    val SurfaceContainer = Color(0xFFF1ECE3)
 
     // Text
     val TextPrimary = Color(0xFF171611)
@@ -59,14 +59,14 @@ object GajaColors {
 
     // Gradients
     val GradientStart = LimePrimary
-    val GradientEnd = Color(0xFFD57F34)
+    val GradientEnd = Color(0xFF2C5A4F)
 }
 
 /** Light color scheme - Primary theme for GAJA app */
 private val LightColorScheme = lightColorScheme(
     primary = GajaColors.LimePrimary,
     onPrimary = GajaColors.TextPrimary,
-    primaryContainer = Color(0xFFDDEFBF),
+    primaryContainer = Color(0xFFD8F4EB),
     onPrimaryContainer = GajaColors.TextPrimary,
     
     secondary = GajaColors.LimeDark,
@@ -74,9 +74,9 @@ private val LightColorScheme = lightColorScheme(
     secondaryContainer = GajaColors.LimeSurface,
     onSecondaryContainer = GajaColors.TextPrimary,
     
-    tertiary = Color(0xFFE39A45),
+    tertiary = Color(0xFFC69A5F),
     onTertiary = GajaColors.TextPrimary,
-    tertiaryContainer = Color(0xFFF4DBBD),
+    tertiaryContainer = Color(0xFFF1E2CB),
     onTertiaryContainer = GajaColors.TextPrimary,
     
     background = GajaColors.Background,
@@ -89,7 +89,7 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = GajaColors.TextSecondary,
     
     surfaceContainer = GajaColors.SurfaceContainer,
-    surfaceContainerHigh = Color(0xFFE9DFCF),
+    surfaceContainerHigh = Color(0xFFEDE7DD),
     
     outline = GajaColors.Outline,
     outlineVariant = GajaColors.OutlineVariant,
@@ -108,35 +108,35 @@ private val LightColorScheme = lightColorScheme(
 
 /** Dark color scheme - Dark mode support */
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF9EF06A),
-    onPrimary = Color(0xFF132012),
-    primaryContainer = Color(0xFF243523),
-    onPrimaryContainer = Color(0xFFE6FFD0),
+    primary = Color(0xFF8BE8CB),
+    onPrimary = Color(0xFF10201C),
+    primaryContainer = Color(0xFF17312B),
+    onPrimaryContainer = Color(0xFFD4F8EE),
 
-    secondary = Color(0xFFACC26F),
-    onSecondary = Color(0xFF1C2114),
-    secondaryContainer = Color(0xFF28311D),
-    onSecondaryContainer = Color(0xFFE4EFCF),
+    secondary = Color(0xFF9CC8B9),
+    onSecondary = Color(0xFF11201B),
+    secondaryContainer = Color(0xFF203631),
+    onSecondaryContainer = Color(0xFFD5ECE5),
 
-    tertiary = Color(0xFFF2B467),
-    onTertiary = Color(0xFF251505),
-    tertiaryContainer = Color(0xFF513012),
-    onTertiaryContainer = Color(0xFFFFD9B6),
+    tertiary = Color(0xFFD5AE78),
+    onTertiary = Color(0xFF23170A),
+    tertiaryContainer = Color(0xFF4E3921),
+    onTertiaryContainer = Color(0xFFF8DFC1),
 
-    background = Color(0xFF0D1815),
+    background = Color(0xFF0C1614),
     onBackground = GajaColors.TextInverse,
 
-    surface = Color(0xFF13211D),
+    surface = Color(0xFF111D1A),
     onSurface = GajaColors.TextInverse,
 
-    surfaceVariant = Color(0xFF1D2B27),
-    onSurfaceVariant = Color(0xFFB9C9C1),
+    surfaceVariant = Color(0xFF1A2A26),
+    onSurfaceVariant = Color(0xFFB7C8C1),
 
-    surfaceContainer = Color(0xFF162520),
-    surfaceContainerHigh = Color(0xFF20332D),
+    surfaceContainer = Color(0xFF152420),
+    surfaceContainerHigh = Color(0xFF1C2F2A),
 
-    outline = Color(0xFF3B4F48),
-    outlineVariant = Color(0xFF22312C),
+    outline = Color(0xFF385049),
+    outlineVariant = Color(0xFF243530),
 
     error = Color(0xFFFF8A72),
     onError = Color(0xFF3B0800),

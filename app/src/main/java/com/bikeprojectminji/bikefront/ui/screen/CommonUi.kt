@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,12 +48,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bikeprojectminji.bikefront.ui.theme.GajaDimensions
 import com.bikeprojectminji.bikefront.ui.theme.GajaElevation
+import com.bikeprojectminji.bikefront.ui.theme.GajaIconTokens
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 
 // ============================================================================
@@ -259,48 +262,72 @@ fun HeroCard(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent,
+            containerColor = MaterialTheme.colorScheme.inverseSurface,
         ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.horizontalGradient(gradientColors))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            gradientColors.firstOrNull() ?: MaterialTheme.colorScheme.inverseSurface,
+                            gradientColors.lastOrNull() ?: MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ),
+                    ),
+                )
                 .padding(GajaSpacing.CardPadding),
         ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                if (icon != null) {
-                    Text(
-                        text = icon,
-                        style = MaterialTheme.typography.headlineLarge,
-                    )
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = GajaIconTokens.Ride,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = icon ?: "GAJA RIDE",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.92f),
+                    color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.78f),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
                 FilledTonalButton(
                     onClick = onClick,
-                    shape = MaterialTheme.shapes.medium,
+                    shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.inverseSurface,
-                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
                 ) {
                     Text(
                         text = buttonText,
                         style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
@@ -333,7 +360,7 @@ fun BikeSurfaceCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    ElevatedCard(
+    Card(
         modifier = modifier
             .fillMaxWidth()
             .then(
@@ -344,12 +371,10 @@ fun BikeSurfaceCard(
                 }
             ),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = GajaElevation.Medium,
-        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
         content = content,
     )
 }
@@ -364,17 +389,13 @@ fun CourseCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    ElevatedCard(
+    Card(
         modifier = modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = GajaElevation.Medium,
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -419,12 +440,10 @@ fun CourseCard(
                 MetricChip(
                     label = "거리",
                     value = "%.1f km".format(course.distanceKm),
-                    icon = "\uD83D\uDCCD", // 📍
                 )
                 MetricChip(
                     label = "예상",
                     value = "${course.estimatedDurationMin}분",
-                    icon = "\u23F1", // ⏱
                 )
             }
         }
@@ -530,10 +549,19 @@ fun FeatureCard(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = feature.icon,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
+                    if (feature.icon.isNotBlank()) {
+                        Text(
+                            text = feature.icon,
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                        )
+                    }
                     Text(
                         text = feature.text,
                         style = MaterialTheme.typography.bodyMedium,
@@ -842,7 +870,7 @@ fun ErrorStateView(
     message: String,
     modifier: Modifier = Modifier,
     title: String = "오류가 발생했습니다",
-    icon: String = "\u26A0\uFE0F", // ⚠️
+    icon: String = "",
     onRetry: (() -> Unit)? = null,
 ) {
     Surface(
@@ -857,10 +885,12 @@ fun ErrorStateView(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = icon,
-                style = MaterialTheme.typography.displaySmall,
-            )
+            if (icon.isNotBlank()) {
+                Text(
+                    text = icon,
+                    style = MaterialTheme.typography.displaySmall,
+                )
+            }
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
@@ -906,8 +936,9 @@ fun MetricChip(
 ) {
     Surface(
         modifier = modifier,
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -915,10 +946,21 @@ fun MetricChip(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (icon != null) {
-                Text(
-                    text = icon,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                ) {
+                    Box(
+                        modifier = Modifier.size(22.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = icon,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
             }
             Column(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -1123,7 +1165,7 @@ private fun ProfileStatCard(
                 text = value,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -1253,19 +1295,14 @@ fun GajaBrandTopBar(
                     color = MaterialTheme.colorScheme.primaryContainer,
                 ) {
                     Text(
-                        text = "GAJA RIDE",
+                        text = "GAJA",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                Text(text = title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 if (!subtitle.isNullOrBlank()) {
                     Text(
                         text = subtitle,

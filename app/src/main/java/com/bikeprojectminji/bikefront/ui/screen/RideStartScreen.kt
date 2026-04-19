@@ -114,14 +114,15 @@ fun RideStartScreen(
                 } else {
                     HeroCard(
                         title = "바로 출발",
-                        description = "코스 없이도 지금 위치에서 즉시 라이딩을 시작할 수 있습니다.",
+                        description = "지금 위치에서 바로 기록을 시작하고, 필요할 때 코스로 전환할 수 있습니다.",
                         buttonText = "자유 주행 열기",
                         onClick = onStartFreeRide,
+                        icon = "자유 주행",
                     )
 
                     SectionHeader(
                         title = "추천 코스",
-                        subtitle = "빠르게 ride 흐름으로 들어갈 수 있는 코스",
+                        subtitle = "빠르게 출발하기 좋은 코스",
                     )
                     when (val currentFeaturedState = featuredState) {
                         SectionState.Loading -> LoadingStateView(message = "추천 코스를 불러오는 중입니다.")
@@ -153,7 +154,7 @@ fun RideStartScreen(
 
                     SectionHeader(
                         title = "전체 코스 목록",
-                        subtitle = "추천이 부족할 때 직접 탐색하는 영역",
+                        subtitle = "거리와 시간 중심으로 바로 비교하는 목록",
                     )
                     when (val currentListState = listState) {
                         SectionState.Loading -> LoadingStateView(message = "전체 코스를 불러오는 중입니다.")
@@ -261,7 +262,7 @@ private fun FeaturedCourseHeroCard(
             MaterialTheme.colorScheme.inverseSurface,
             MaterialTheme.colorScheme.secondaryContainer,
         ),
-        icon = null,
+        icon = "추천 코스",
     )
 
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

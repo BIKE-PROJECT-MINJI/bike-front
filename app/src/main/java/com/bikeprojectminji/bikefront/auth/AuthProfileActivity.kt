@@ -60,6 +60,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.Icon
 import com.bikeprojectminji.bikefront.R
 import com.bikeprojectminji.bikefront.ui.screen.GajaOutlinedButton
 import com.bikeprojectminji.bikefront.ui.screen.GajaSecondaryButton
@@ -376,27 +380,16 @@ private fun AuthProfileScreen(
 
                 // === Secondary Actions ===
                 if (isRegisterMode) {
-                    GajaSecondaryButton(
-                        text = "기존 계정으로 로그인",
-                        onClick = onToggleMode,
-                        enabled = !inFlight,
-                        icon = "🔐",
-                    )
+                    TextButton(onClick = onToggleMode, enabled = !inFlight, modifier = Modifier.fillMaxWidth()) {
+                        Text("기존 계정으로 로그인")
+                    }
                 } else {
-                    GajaSecondaryButton(
-                        text = "새 계정 만들기",
-                        onClick = onToggleMode,
-                        enabled = !inFlight,
-                        icon = "✨",
-                    )
+                    TextButton(onClick = onToggleMode, enabled = !inFlight, modifier = Modifier.fillMaxWidth()) {
+                        Text("새 계정 만들기")
+                    }
                 }
 
-                GajaOutlinedButton(
-                    text = "나중에 할게요",
-                    onClick = onLater,
-                    enabled = !inFlight,
-                    icon = "←",
-                )
+                GajaOutlinedButton(text = "나중에 할게요", onClick = onLater, enabled = !inFlight)
 
                 // === Help Section ===
                 HelpSection()
@@ -552,9 +545,10 @@ private fun StatusMessageCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = if (isError) "⚠️" else "✓",
-                style = MaterialTheme.typography.titleMedium,
+            Icon(
+                imageVector = if (isError) Icons.Outlined.WarningAmber else Icons.Outlined.CheckCircle,
+                contentDescription = null,
+                tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
             )
             Text(
                 text = message,

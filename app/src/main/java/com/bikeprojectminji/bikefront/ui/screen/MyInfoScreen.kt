@@ -28,6 +28,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -53,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
+import com.bikeprojectminji.bikefront.ui.theme.GajaIconTokens
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -260,10 +262,10 @@ private fun NotLoggedInContent(onOpenProfile: () -> Unit) {
 
         GajaFeatureCard(
             features = listOf(
-                FeatureItem(icon = "•", text = "주행 경로 저장 및 공유"),
-                FeatureItem(icon = "•", text = "상세 주행 통계 분석"),
-                FeatureItem(icon = "•", text = "나만의 코스 만들기"),
-                FeatureItem(icon = "•", text = "라이딩 이력 관리"),
+                FeatureItem(icon = "", text = "주행 경로 저장 및 공유"),
+                FeatureItem(icon = "", text = "상세 주행 통계 분석"),
+                FeatureItem(icon = "", text = "나만의 코스 만들기"),
+                FeatureItem(icon = "", text = "라이딩 이력 관리"),
             ),
         )
     }
@@ -410,19 +412,16 @@ private fun EnhancedProfileHeroCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 QuickStatItem(
-                    icon = "📍",
                     label = "누적",
                     value = "1,248 km",
                     modifier = Modifier.weight(1f),
                 )
                 QuickStatItem(
-                    icon = "🏔",
                     label = "고도",
                     value = "8,520 m",
                     modifier = Modifier.weight(1f),
                 )
                 QuickStatItem(
-                    icon = "🚴",
                     label = "주행",
                     value = "42회",
                     modifier = Modifier.weight(1f),
@@ -435,7 +434,6 @@ private fun EnhancedProfileHeroCard(
 // === Quick Stat Item ===
 @Composable
 private fun QuickStatItem(
-    icon: String,
     label: String,
     value: String,
     modifier: Modifier = Modifier,
@@ -450,10 +448,6 @@ private fun QuickStatItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(
-                text = icon,
-                style = MaterialTheme.typography.titleLarge,
-            )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
@@ -483,14 +477,12 @@ private fun StatsGridSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             StatMetricCard(
-                icon = "📍",
                 title = "총 거리",
                 value = totalDistance,
                 subtitle = "누적 주행",
                 modifier = Modifier.weight(1f),
             )
             StatMetricCard(
-                icon = "🏔",
                 title = "획득 고도",
                 value = totalElevation,
                 subtitle = "총 상승",
@@ -502,14 +494,12 @@ private fun StatsGridSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             StatMetricCard(
-                icon = "🚴",
                 title = "주행 횟수",
                 value = totalRides,
                 subtitle = "완료한 라이딩",
                 modifier = Modifier.weight(1f),
             )
             StatMetricCard(
-                icon = "⚡",
                 title = "평균 속도",
                 value = avgSpeed,
                 subtitle = "전체 평균",
@@ -522,7 +512,6 @@ private fun StatsGridSection(
 // === Stat Metric Card ===
 @Composable
 private fun StatMetricCard(
-    icon: String,
     title: String,
     value: String,
     subtitle: String,
@@ -541,10 +530,6 @@ private fun StatMetricCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = icon,
-                style = MaterialTheme.typography.headlineSmall,
-            )
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium,
@@ -569,112 +554,58 @@ private fun StatMetricCard(
 @Composable
 private fun QuickActionsSection(onOpenProfile: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // === Recorded Courses ===
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                ) {
-                    Box(
-                        modifier = Modifier.size(48.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "🗺",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                    }
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = "기록한 코스",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = "저장한 코스를 확인하고 관리합니다",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    text = "→",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
+        ActivityRow(
+            icon = GajaIconTokens.Saved,
+            title = "기록한 코스",
+            description = "저장한 코스를 확인하고 관리합니다",
+        )
+        ActivityRow(
+            icon = GajaIconTokens.Stats,
+            title = "내 기록",
+            description = "상세 주행 통계를 확인합니다",
+        )
+    }
+}
 
-        // === My Records ===
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+@Composable
+private fun ActivityRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String,
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
             ) {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                Box(
+                    modifier = Modifier
+                        .size(40.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        modifier = Modifier.size(48.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "📊",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                    }
+                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = "내 기록",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = "상세 주행 통계를 확인합니다",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    text = "→",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
             }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(GajaIconTokens.Direction, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -686,14 +617,12 @@ private fun AccountSection(onOpenProfile: () -> Unit) {
         GajaSecondaryButton(
             text = "프로필 관리",
             onClick = onOpenProfile,
-            icon = "⚙️",
         )
 
         GajaOutlinedButton(
             text = "로그아웃",
             onClick = { /* TODO: Implement logout */ },
             enabled = false,
-            icon = "🚪",
         )
     }
 }

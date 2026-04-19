@@ -827,8 +827,8 @@ private fun RideScreen(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small), modifier = Modifier.fillMaxWidth()) {
-                    FloatingHudChip(title = "풍향", value = "NW", modifier = Modifier.weight(1f))
-                    FloatingHudChip(title = "풍속", value = "12m/s", modifier = Modifier.weight(1f))
+                    FloatingHudChip(title = "추적", value = if (isRiding) "기록 중" else "대기", modifier = Modifier.weight(1f))
+                    FloatingHudChip(title = "GPS", value = if (permissionState == FreeRideActivity.PermissionState.GRANTED && latestLocation != null) "연결됨" else "확인 중", modifier = Modifier.weight(1f))
                 }
 
                 Surface(
@@ -998,7 +998,7 @@ private fun MinimalHudPanel(modifier: Modifier = Modifier, title: String, value:
 private fun GpsPill(text: String) {
     Surface(shape = RoundedCornerShape(999.dp), color = MaterialTheme.colorScheme.primaryContainer) {
         Text(
-            text = "• $text",
+            text = text,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
             color = MaterialTheme.colorScheme.onPrimaryContainer,
             style = MaterialTheme.typography.labelMedium,
