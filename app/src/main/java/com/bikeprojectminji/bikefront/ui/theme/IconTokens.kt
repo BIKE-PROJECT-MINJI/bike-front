@@ -3,6 +3,7 @@ package com.bikeprojectminji.bikefront.ui.theme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.DirectionsBike
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Map
@@ -24,4 +25,5 @@ object GajaIconTokens {
     val Location: ImageVector = Icons.Outlined.MyLocation
     val Direction: ImageVector = Icons.AutoMirrored.Outlined.ArrowForward
     val Speed: ImageVector = Icons.Outlined.Speed
+    val Success: ImageVector = Icons.Filled.CheckCircle
 }

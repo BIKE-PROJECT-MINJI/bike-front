@@ -1,43 +1,15 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,205 +17,166 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.bikeprojectminji.bikefront.ui.theme.GajaDimensions
-import com.bikeprojectminji.bikefront.ui.theme.GajaElevation
+import androidx.compose.ui.unit.sp
+import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import com.bikeprojectminji.bikefront.ui.theme.GajaIconTokens
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 
 // ============================================================================
-// GAJA Material 3 Component Library
-// Reusable components built on Material 3 foundations
-// ============================================================================
-
-// ============================================================================
-// SECTION 1: SCREEN SCAFFOLD
-// Standard screen layout with optional TopAppBar
+// GAJA MODERN FOREST COMPONENT LIBRARY
+// Sophisticated Green, High Readability
 // ============================================================================
 
 /**
- * Standard screen scaffold with consistent padding and optional TopAppBar.
- * Use this for all main screens to ensure consistent layout.
- * 
- * @param title TopAppBar title (shows TopAppBar if provided)
- * @param subtitle Optional subtitle below title
- * @param navigationIcon Optional navigation icon
- * @param actions Optional action icons in TopAppBar
- * @param useGradientHeader Whether to use gradient header background
- * @param content Main screen content
+ * Modern, clean TopBar.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppScreenScaffold(
-    title: String? = null,
-    subtitle: String? = null,
-    navigationIcon: @Composable (() -> Unit)? = null,
-    actions: @Composable (() -> Unit)? = null,
-    useGradientHeader: Boolean = false,
-    content: @Composable (PaddingValues) -> Unit,
-) {
-    if (title != null) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            topBar = {
-                if (useGradientHeader) {
-                    // Gradient header for hero sections
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primary,
-                                        MaterialTheme.colorScheme.tertiary,
-                                    ),
-                                ),
-                            )
-                            .padding(
-                                horizontal = GajaSpacing.CardPadding,
-                                vertical = GajaSpacing.ScreenPadding,
-                            ),
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                            if (!subtitle.isNullOrBlank()) {
-                                Text(
-                                    text = subtitle,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.92f),
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    TopAppBar(
-                        title = {
-                            Column {
-                                Text(
-                                    text = title,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                                if (!subtitle.isNullOrBlank()) {
-                                    Text(
-                                        text = subtitle,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        },
-                        navigationIcon = {
-                            if (navigationIcon != null) {
-                                navigationIcon()
-                            }
-                        },
-                        actions = {
-                            if (actions != null) {
-                                actions()
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                            actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                    )
-                }
-            },
-        ) { innerPadding ->
-            content(innerPadding)
+fun GajaBrandTopBar(
+    title: String,
+    actions: @Composable RowScope.() -> Unit = {
+        IconButton(onClick = { }) {
+            Icon(Icons.Default.Notifications, contentDescription = null, tint = GajaColors.TextPrimary)
         }
-    } else {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-        ) { innerPadding ->
-            content(innerPadding)
+        IconButton(onClick = { }) {
+            Icon(Icons.Default.Settings, contentDescription = null, tint = GajaColors.TextPrimary)
         }
     }
-}
-
-// ============================================================================
-// SECTION 2: SECTION HEADERS
-// Consistent section headers with optional actions
-// ============================================================================
-
-/**
- * Section header with title, optional subtitle, and optional action.
- * Use for dividing content into logical sections.
- */
-@Composable
-fun AppSectionHeader(
-    title: String,
-    subtitle: String? = null,
-    modifier: Modifier = Modifier,
-    action: @Composable (() -> Unit)? = null,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.weight(1f),
-        ) {
+    TopAppBar(
+        title = {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = GajaColors.TextPrimary
             )
-            if (!subtitle.isNullOrBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        },
+        actions = actions,
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.Transparent,
+            titleContentColor = GajaColors.TextPrimary
+        )
+    )
+}
+
+/**
+ * Primary action button - Forest Green.
+ */
+@Composable
+fun GajaPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    enabled: Boolean = true
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = GajaColors.Primary,
+            contentColor = GajaColors.White,
+            disabledContainerColor = GajaColors.Border,
+            disabledContentColor = GajaColors.TextTertiary
+        ),
+        enabled = enabled,
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+            if (icon != null) {
+                Spacer(Modifier.width(8.dp))
+                Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
             }
         }
-        action?.invoke()
     }
 }
 
-/** Legacy alias for backward compatibility */
+/**
+ * Secondary button - Outlined with Forest Green.
+ */
+@Composable
+fun SecondaryActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.5.dp, GajaColors.Primary),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = GajaColors.Primary
+        ),
+        enabled = enabled
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+/**
+ * Data-rich Section Header.
+ */
 @Composable
 fun SectionHeader(
     title: String,
     subtitle: String? = null,
     modifier: Modifier = Modifier,
-    action: @Composable (() -> Unit)? = null,
-) = AppSectionHeader(title, subtitle, modifier, action)
-
-@Composable
-fun SectionTitle(
-    title: String,
-    subtitle: String? = null,
-    modifier: Modifier = Modifier,
-) = AppSectionHeader(title, subtitle, modifier)
-
-// ============================================================================
-// SECTION 3: CARDS
-// Card variants for different content types
-// ============================================================================
+    action: @Composable (() -> Unit)? = null
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = GajaSpacing.Small)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                color = GajaColors.TextPrimary,
+                fontWeight = FontWeight.Bold
+            )
+            action?.invoke()
+        }
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = GajaColors.TextSecondary,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+    }
+}
 
 /**
- * Hero card with gradient background for prominent CTAs.
- * Use for primary actions and featured content.
+ * Hero Card with Fresh Forest Gradient.
  */
 @Composable
 fun HeroCard(
@@ -253,1074 +186,223 @@ fun HeroCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: String? = null,
-    gradientColors: List<Color> = listOf(
-        MaterialTheme.colorScheme.primary,
-        MaterialTheme.colorScheme.tertiary,
-    ),
+    gradientColors: List<Color> = GajaColors.BrandGradient
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.inverseSurface,
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = GajaColors.Primary),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            gradientColors.firstOrNull() ?: MaterialTheme.colorScheme.inverseSurface,
-                            gradientColors.lastOrNull() ?: MaterialTheme.colorScheme.surfaceContainerHigh,
-                        ),
-                    ),
-                )
-                .padding(GajaSpacing.CardPadding),
+                .background(Brush.horizontalGradient(gradientColors))
+                .padding(GajaSpacing.Large)
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)) {
+                if (icon != null) {
+                    Surface(
+                        color = GajaColors.LimeAccent,
+                        shape = RoundedCornerShape(4.dp)
                     ) {
-                        Icon(
-                            imageVector = GajaIconTokens.Ride,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
                         Text(
-                            text = icon ?: "GAJA RIDE",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
+                            icon.uppercase(),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = GajaColors.TextPrimary
                         )
                     }
                 }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.inverseOnSurface,
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.78f),
-                )
-                FilledTonalButton(
-                    onClick = onClick,
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                ) {
+                
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = buttonText,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
+                        text = title,
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = GajaColors.White,
+                        fontWeight = FontWeight.Black
                     )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = GajaColors.White.copy(alpha = 0.9f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Button(
+                    onClick = onClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = GajaColors.White),
+                    shape = MaterialTheme.shapes.medium,
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                ) {
+                    Text(buttonText, color = GajaColors.Primary, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(8.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = GajaColors.Primary)
                 }
             }
         }
     }
 }
 
-/** Legacy alias */
-@Composable
-fun GajaPrimaryCard(
-    title: String,
-    description: String,
-    buttonText: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    gradientColors: List<Color> = listOf(
-        MaterialTheme.colorScheme.primary,
-        MaterialTheme.colorScheme.tertiary,
-    ),
-    icon: String? = null,
-) = HeroCard(title, description, buttonText, onClick, modifier, icon, gradientColors)
-
 /**
- * Standard surface card for content containers.
- * Use for most card-based content.
- */
-@Composable
-fun BikeSurfaceCard(
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable(onClick = onClick)
-                } else {
-                    Modifier
-                }
-            ),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        content = content,
-    )
-}
-
-/**
- * Course card for displaying course information.
- * Standard card for course list items.
+ * Compact Course Card for lists.
  */
 @Composable
 fun CourseCard(
-    course: CourseCardUiModel,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
+    course: com.bikeprojectminji.bikefront.ui.screen.CourseCardUiModel,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // Title Row with Badge
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = course.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                if (course.isRecorded) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                    ) {
-                        Text(
-                            text = "기록",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-                }
-            }
-            
-            // Metrics Row
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                MetricChip(
-                    label = "거리",
-                    value = "%.1f km".format(course.distanceKm),
-                )
-                MetricChip(
-                    label = "예상",
-                    value = "${course.estimatedDurationMin}분",
-                )
-            }
-        }
-    }
-}
-
-/**
- * Info card for displaying information with icon.
- * Use for tips, status, or informational content.
- */
-@Composable
-fun InfoCard(
-    title: String,
-    description: String,
-    modifier: Modifier = Modifier,
-    icon: String? = null,
-    accentColor: Color = MaterialTheme.colorScheme.primary,
-) {
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 4.dp,
-        ),
+            .clickable { onClick() },
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = GajaColors.White),
+        border = BorderStroke(1.dp, GajaColors.Border)
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(GajaSpacing.Medium)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)
         ) {
-            if (icon != null) {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = accentColor.copy(alpha = 0.12f),
-                ) {
-                    Box(
-                        modifier = Modifier.size(48.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = icon,
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
-                    }
-                }
-            }
-            Column(
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(GajaColors.PrimaryContainer),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Icon(GajaIconTokens.Course, contentDescription = null, tint = GajaColors.Primary)
             }
-        }
-    }
-}
 
-/** Legacy alias */
-@Composable
-fun GajaInfoCard(
-    title: String,
-    description: String,
-    modifier: Modifier = Modifier,
-    icon: String? = null,
-    accentColor: Color = MaterialTheme.colorScheme.primary,
-) = InfoCard(title, description, modifier, icon, accentColor)
-
-/**
- * Feature card for displaying feature lists.
- * Use for onboarding or feature highlights.
- */
-@Composable
-fun FeatureCard(
-    features: List<FeatureItem>,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            features.forEach { feature ->
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = course.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = GajaColors.TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(top = 4.dp)
                 ) {
-                    if (feature.icon.isNotBlank()) {
-                        Text(
-                            text = feature.icon,
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
-                        )
-                    }
-                    Text(
-                        text = feature.text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                    MetricLabel(GajaIconTokens.Distance, "%.1fkm".format(course.distanceKm))
+                    MetricLabel(GajaIconTokens.Duration, "${course.estimatedDurationMin}m")
                 }
             }
-        }
-    }
-}
-
-/** Legacy alias */
-@Composable
-fun GajaFeatureCard(
-    features: List<FeatureItem>,
-    modifier: Modifier = Modifier,
-) = FeatureCard(features, modifier)
-
-data class FeatureItem(
-    val icon: String,
-    val text: String,
-)
-
-// ============================================================================
-// SECTION 4: BUTTONS
-// Button variants for different actions
-// ============================================================================
-
-/**
- * Primary action button - filled style.
- * Use for main CTAs and primary actions.
- */
-@Composable
-fun PrimaryActionButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    icon: ImageVector? = null,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(GajaDimensions.ButtonHeight),
-        enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-        ),
-    ) {
-        if (icon != null) {
-            androidx.compose.material3.Icon(
-                imageVector = icon,
+            
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                tint = GajaColors.TextTertiary,
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
         }
+    }
+}
+
+@Composable
+private fun MetricLabel(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = GajaColors.TextSecondary
+        )
+        Spacer(Modifier.width(4.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelMedium,
+            color = GajaColors.TextSecondary
         )
     }
 }
 
-/**
- * Secondary action button - tonal style.
- * Use for secondary actions and alternative options.
- */
-@Composable
-fun SecondaryActionButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    icon: ImageVector? = null,
-) {
-    FilledTonalButton(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(GajaDimensions.ButtonHeight),
-        enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
-        colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        ),
-    ) {
-        if (icon != null) {
-            androidx.compose.material3.Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
-/**
- * Tertiary action button - outlined style.
- * Use for tertiary actions and less prominent options.
- */
-@Composable
-fun TertiaryActionButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    icon: ImageVector? = null,
-) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(GajaDimensions.ButtonHeight),
-        enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
-    ) {
-        if (icon != null) {
-            androidx.compose.material3.Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
-/** Legacy emoji-based buttons for backward compatibility */
-@Composable
-fun GajaSecondaryButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    icon: String? = null,
-) {
-    FilledTonalButton(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
-        colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        ),
-    ) {
-        if (icon != null) {
-            Text(
-                text = icon,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(end = 8.dp),
-            )
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
-@Composable
-fun GajaOutlinedButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    icon: String? = null,
-) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
-    ) {
-        if (icon != null) {
-            Text(
-                text = icon,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(end = 8.dp),
-            )
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
-// ============================================================================
-// SECTION 5: STATE VIEWS
-// Empty, loading, and error states
-// ============================================================================
-
-/**
- * Empty state view for when there's no content.
- * Use for empty lists, no results, etc.
- */
-@Composable
-fun EmptyStateView(
-    message: String,
-    modifier: Modifier = Modifier,
-    icon: String? = null,
-    title: String? = null,
-    action: @Composable (() -> Unit)? = null,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (icon != null) {
-                Text(
-                    text = icon,
-                    style = MaterialTheme.typography.displaySmall,
-                )
-            }
-            if (!title.isNullOrBlank()) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            action?.invoke()
-        }
-    }
-}
-
-/** Legacy alias */
-@Composable
-fun GajaEmptyState(
-    message: String,
-    modifier: Modifier = Modifier,
-    icon: String? = null,
-) = EmptyStateView(message, modifier, icon)
-
-/**
- * Loading state view with progress indicator.
- * Use for loading states and async operations.
- */
-@Composable
-fun LoadingStateView(
-    message: String = "로딩 중...",
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
-                color = MaterialTheme.colorScheme.primary,
-                strokeWidth = 4.dp,
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
-
-/**
- * Error state view for error conditions.
- * Use for error states with retry option.
- */
-@Composable
-fun ErrorStateView(
-    message: String,
-    modifier: Modifier = Modifier,
-    title: String = "오류가 발생했습니다",
-    icon: String = "",
-    onRetry: (() -> Unit)? = null,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (icon.isNotBlank()) {
-                Text(
-                    text = icon,
-                    style = MaterialTheme.typography.displaySmall,
-                )
-            }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.error,
-            )
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            if (onRetry != null) {
-                TextButton(
-                    onClick = onRetry,
-                ) {
-                    Text(
-                        text = "다시 시도",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ============================================================================
-// SECTION 6: METRIC CHIPS
-// Compact metric displays
-// ============================================================================
-
-/**
- * Metric chip for displaying key metrics.
- * Use for distance, time, speed, etc.
- */
 @Composable
 fun MetricChip(
     label: String,
     value: String,
-    modifier: Modifier = Modifier,
-    icon: String? = null,
+    modifier: Modifier = Modifier
 ) {
-    Surface(
+    Card(
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (icon != null) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                ) {
-                    Box(
-                        modifier = Modifier.size(22.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = icon,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
-            Column(
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-    }
-}
-
-/**
- * Hero metric card for prominent metric display.
- * Use for dashboard stats and key metrics.
- */
-@Composable
-fun HeroMetricCard(
-    title: String,
-    value: String,
-    subtitle: String? = null,
-    modifier: Modifier = Modifier,
-    accentColor: Color = MaterialTheme.colorScheme.primary,
-    icon: String? = null,
-) {
-    ElevatedCard(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.extraLarge,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 4.dp,
-        ),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = GajaColors.PrimaryContainer),
+        border = BorderStroke(1.dp, GajaColors.Border)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (icon != null) {
-                Text(
-                    text = icon,
-                    style = MaterialTheme.typography.headlineMedium,
-                )
-            }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                color = accentColor,
-            )
-            if (!subtitle.isNullOrBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-    }
-}
-
-// ============================================================================
-// SECTION 7: PROFILE COMPONENTS
-// User profile related components
-// ============================================================================
-
-/**
- * Profile hero card for user profile display.
- * Use for profile sections and user info.
- */
-@Composable
-fun ProfileHeroCard(
-    displayName: String,
-    modifier: Modifier = Modifier,
-    onProfileClick: (() -> Unit)? = null,
-    stats: List<ProfileStat>? = null,
-) {
-    ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(if (onProfileClick != null) Modifier.clickable(onClick = onProfileClick) else Modifier),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 2.dp,
-        ),
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            // Avatar Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Avatar Circle with gradient
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.tertiary,
-                                ),
-                            ),
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = displayName.firstOrNull()?.uppercase() ?: "?",
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                }
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = displayName,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = "탭하여 프로필 관리",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            
-            // Stats Row
-            if (!stats.isNullOrEmpty()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    stats.forEach { stat ->
-                        ProfileStatCard(
-                            label = stat.label,
-                            value = stat.value,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-data class ProfileStat(
-    val label: String,
-    val value: String,
-)
-
-@Composable
-private fun ProfileStatCard(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(GajaSpacing.Medium),
+            horizontalAlignment = Alignment.Start
         ) {
             Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = label.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = GajaColors.TextSecondary
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = GajaColors.TextPrimary,
+                fontWeight = FontWeight.Black
             )
         }
     }
 }
 
-// ============================================================================
-// SECTION 8: STATUS BADGES
-// Status indicators and badges
-// ============================================================================
-
-/**
- * Status badge for displaying status.
- * Use for active/inactive states, labels, etc.
- */
 @Composable
-fun StatusBadge(
-    text: String,
-    modifier: Modifier = Modifier,
-    isActive: Boolean = false,
-) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Text(
-            text = text,
-            modifier = modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
-/** Legacy alias */
-@Composable
-fun GajaStatusBadge(
-    text: String,
-    modifier: Modifier = Modifier,
-    isActive: Boolean = false,
-) = StatusBadge(text, modifier, isActive)
-
-// ============================================================================
-// SECTION 9: LEGACY HEADERS
-// Backward compatibility for existing screens
-// ============================================================================
-
-@Composable
-fun GajaHeader(
-    title: String,
-    subtitle: String? = null,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                Brush.horizontalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.tertiary,
-                    ),
-                ),
-            )
-            .padding(horizontal = 24.dp, vertical = 28.dp),
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary,
-            )
-            if (!subtitle.isNullOrBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.92f),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun GajaCompactHeader(
-    title: String,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primary)
-            .padding(horizontal = 24.dp, vertical = 20.dp),
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimary,
-        )
-    }
-}
-
-@Composable
-fun GajaBrandTopBar(
-    title: String,
-    subtitle: String? = null,
-    showSettings: Boolean = false,
-) {
-    Surface(
+fun BikeSurfaceCard(content: @Composable () -> Unit) {
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.background,
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = GajaColors.PrimaryContainer),
+        content = { content() }
+    )
+}
+
+@Composable
+fun LoadingStateView(message: String) {
+    Box(Modifier.fillMaxWidth().padding(GajaSpacing.Large), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(color = GajaColors.Primary)
+            Spacer(Modifier.height(GajaSpacing.Medium))
+            Text(message, style = MaterialTheme.typography.bodyMedium, color = GajaColors.TextSecondary)
+        }
+    }
+}
+
+@Composable
+fun ErrorStateView(title: String, message: String, onRetry: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = GajaColors.Error.copy(alpha = 0.1f)),
+        border = BorderStroke(1.dp, GajaColors.Error)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                ) {
-                    Text(
-                        text = "GAJA",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-                Text(text = title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                if (!subtitle.isNullOrBlank()) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (showSettings) {
-                    IconButton(onClick = {}) {
-                        androidx.compose.material3.Icon(Icons.Filled.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                IconButton(onClick = {}) {
-                    androidx.compose.material3.Icon(Icons.Filled.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                }
+        Column(Modifier.padding(GajaSpacing.Medium), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = GajaColors.Error)
+            Text(message, style = MaterialTheme.typography.bodySmall, color = GajaColors.TextPrimary)
+            TextButton(onClick = onRetry) {
+                Text("다시 시도", color = GajaColors.Error, fontWeight = FontWeight.Bold)
             }
         }
+    }
+}
+
+@Composable
+fun EmptyStateView(title: String, message: String) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(GajaSpacing.Large),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(GajaIconTokens.Course, contentDescription = null, modifier = Modifier.size(48.dp), tint = GajaColors.TextTertiary)
+        Text(title, style = MaterialTheme.typography.titleMedium, color = GajaColors.TextPrimary)
+        Text(message, style = MaterialTheme.typography.bodyMedium, color = GajaColors.TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
