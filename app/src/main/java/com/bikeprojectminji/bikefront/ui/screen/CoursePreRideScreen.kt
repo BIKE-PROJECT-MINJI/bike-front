@@ -1,30 +1,17 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -44,120 +31,83 @@ fun CoursePreRideScreen(
         }
     }
     val resolvedCourse = detailResult?.getOrNull() ?: course
-    val detailLoading = detailResult == null
-    val detailError = detailResult?.exceptionOrNull() != null
+    val loading = detailResult == null
+    val error = detailResult?.exceptionOrNull() != null
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { scaffoldPadding ->
+    Scaffold(
+        topBar = { GajaBrandTopBar(title = "Course Detail") },
+        containerColor = GajaColors.Background
+    ) { scaffoldPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(scaffoldPadding)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = GajaSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)
         ) {
-            GajaBrandTopBar(
-                title = "코스 따라가기",
-                subtitle = "코스 개요를 확인하고 바로 주행을 시작합니다",
-            )
+            Spacer(Modifier.height(GajaSpacing.Small))
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                                MaterialTheme.colorScheme.background,
-                            ),
-                        ),
-                    )
-                    .padding(
-                        horizontal = GajaSpacing.ScreenPadding,
-                        vertical = GajaSpacing.Large,
-                    ),
-                verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large),
+            // Course Hero Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = GajaColors.TextPrimary)
             ) {
-                CourseLaunchHero(course = resolvedCourse)
-
-                BikeSurfaceCard {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(GajaSpacing.CardPadding),
-                        verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small),
+                Column(
+                    modifier = Modifier.padding(GajaSpacing.Large),
+                    verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)
+                ) {
+                    Surface(
+                        color = GajaColors.Accent,
+                        shape = RoundedCornerShape(4.dp)
                     ) {
-                        SectionHeader(title = "주행 개요")
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            MetricChip(label = "거리", value = formatDistance(resolvedCourse.distanceKm), modifier = Modifier.weight(1f))
-                            MetricChip(label = "예상시간", value = "${resolvedCourse.estimatedDurationMin}분", modifier = Modifier.weight(1f))
-                        }
+                        Text(
+                            (if (resolvedCourse.isRecorded) "Recorded" else "Curated").uppercase(),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = GajaColors.TextPrimary
+                        )
                     }
-                }
-
-                if (detailLoading) {
-                    LoadingStateView(message = "코스 정보를 확인하는 중입니다.")
-                } else if (detailError) {
-                    ErrorStateView(
-                        title = "시작할 수 없습니다",
-                        message = "코스 정보를 불러오지 못했습니다. 다시 시도해 주세요.",
+                    Text(
+                        text = resolvedCourse.title,
+                        style = MaterialTheme.typography.displayMedium,
+                        color = Color.White
                     )
                 }
+            }
 
-                PrimaryActionButton(
-                    text = "이 코스로 라이딩 시작",
-                    enabled = !detailLoading && !detailError,
-                    onClick = onStartRide,
+            SectionHeader(title = "주행 데이터", subtitle = "이 코스의 예상 주행 지표입니다")
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
+                MetricChip(label = "총 거리", value = formatDistance(resolvedCourse.distanceKm), modifier = Modifier.weight(1f))
+                MetricChip(label = "예상 시간", value = "${resolvedCourse.estimatedDurationMin}분", modifier = Modifier.weight(1f))
+            }
+
+            if (loading) {
+                LoadingStateView("코스 상세 분석 중...")
+            } else if (error) {
+                ErrorStateView("로드 실패", "코스 데이터를 가져오지 못했습니다.") { /* Retry logic */ }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
+                GajaPrimaryButton(
+                    text = "라이딩 시작",
+                    enabled = !loading && !error,
+                    onClick = onStartRide
                 )
-
                 SecondaryActionButton(
-                    text = "코스 탐색으로 돌아가기",
-                    onClick = onBack,
+                    text = "돌아가기",
+                    onClick = onBack
                 )
-                Spacer(modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()))
             }
-        }
-    }
-}
-
-@Composable
-private fun CourseLaunchHero(course: CourseCardUiModel) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.inverseSurface,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.inverseSurface,
-                            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
-                        ),
-                    ),
-                )
-                .padding(GajaSpacing.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium),
-        ) {
-            StatusBadge(text = if (course.isRecorded) "기록 코스" else "추천 코스", isActive = true)
-            Text(
-                text = course.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.inverseOnSurface,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small)) {
-                MetricChip(label = "거리", value = formatDistance(course.distanceKm), modifier = Modifier.weight(1f))
-                MetricChip(label = "예상시간", value = "${course.estimatedDurationMin}분", modifier = Modifier.weight(1f))
-            }
+            Spacer(Modifier.height(40.dp))
         }
     }
 }
 
 private fun formatDistance(distanceKm: Double): String {
-    return if (distanceKm < 1.0) {
-        "${(distanceKm * 1000).toInt()}m"
-    } else {
-        "%.1fkm".format(distanceKm)
-    }
+    return if (distanceKm < 1.0) "${(distanceKm * 1000).toInt()}m" else "%.1fkm".format(distanceKm)
 }
