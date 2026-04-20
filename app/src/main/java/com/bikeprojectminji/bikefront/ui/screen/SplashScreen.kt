@@ -1,81 +1,106 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.DirectionsBike
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(onAnimationFinished: () -> Unit) {
     var startAnimation by remember { mutableStateOf(false) }
-    val alphaAnim = animateFloatAsState(
+    val alphaAnim by animateFloatAsState(
         targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(durationMillis = 1000),
-        label = "alpha"
+        animationSpec = tween(durationMillis = 900),
+        label = "alpha",
     )
 
-    LaunchedEffect(key1 = true) {
+    LaunchedEffect(true) {
         startAnimation = true
-        delay(2000)
+        delay(1800)
         onAnimationFinished()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(GajaColors.Primary, GajaColors.TextPrimary)
-                )
-            ),
-        contentAlignment = Alignment.Center
+            .background(GajaColors.SurfaceContainerLow),
+            contentAlignment = Alignment.Center,
     ) {
         Column(
+            modifier = Modifier.alpha(alphaAnim),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.graphicsLayer(alpha = alphaAnim.value)
         ) {
-            // GAJA Brand Icon (Bike Pictogram)
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
-                contentDescription = "GAJA Logo",
-                modifier = Modifier.size(120.dp),
-                tint = GajaColors.LimeAccent
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // GAJA Brand Text
-            Text(
-                text = "GAJA",
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 56.sp,
-                    letterSpacing = 6.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White
+            Box(
+                modifier = Modifier
+                    .width(160.dp)
+                    .height(160.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(
+                                GajaColors.PrimaryContainer.copy(alpha = 0.24f),
+                                GajaColors.SurfaceContainerLow,
+                            ),
+                        ),
+                        CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "gaja",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = GajaColors.PrimaryContainer,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                 )
-            )
-            
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            Surface(
+                color = GajaColors.SurfaceContainerHigh,
+                shape = MaterialTheme.shapes.small,
+            ) {
+                Box(modifier = Modifier.width(160.dp).height(6.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.45f)
+                            .height(6.dp)
+                            .background(Brush.horizontalGradient(GajaColors.BrandGradient), MaterialTheme.shapes.small),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
             Text(
-                text = "Ride Your Discovery",
-                style = MaterialTheme.typography.labelLarge,
-                color = GajaColors.LimeAccent.copy(alpha = 0.9f),
-                modifier = Modifier.padding(top = 12.dp)
+                text = "주행을 준비하고 있습니다...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = GajaColors.TextSecondary,
             )
         }
     }
