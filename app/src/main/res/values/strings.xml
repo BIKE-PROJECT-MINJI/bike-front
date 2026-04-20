@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Bike Front</string>
+    <string name="app_name">gaja - 가벼운 자전거 여행 앱</string>
     <string name="home_title">홈</string>
     <string name="home_phase2_badge">2차 준비</string>
     <string name="home_intro_title">오늘의 라이딩을 바로 시작해 보세요</string>
