@@ -1,26 +1,16 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 
 @Composable
@@ -29,99 +19,69 @@ fun FreeRidePreRideScreen(
     onBack: () -> Unit,
     onStartRide: () -> Unit,
 ) {
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { scaffoldPadding ->
+    Scaffold(
+        topBar = { GajaBrandTopBar(title = "Free Ride") },
+        containerColor = GajaColors.Background
+    ) { scaffoldPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(scaffoldPadding)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = GajaSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)
         ) {
-            GajaBrandTopBar(
-                title = "자유 주행",
-                subtitle = "출발 전 상태를 보고 바로 기록을 시작합니다",
-            )
+            Spacer(Modifier.height(GajaSpacing.Small))
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                                MaterialTheme.colorScheme.background,
-                            ),
-                        ),
-                    )
-                    .padding(
-                        horizontal = GajaSpacing.ScreenPadding,
-                        vertical = GajaSpacing.Large,
-                    ),
-                verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large),
+            // Free Ride Hero Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = GajaColors.TextPrimary)
             ) {
-                FreeRideHero()
-
-                BikeSurfaceCard {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(GajaSpacing.CardPadding),
-                        verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small),
+                Column(
+                    modifier = Modifier.padding(GajaSpacing.Large),
+                    verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)
+                ) {
+                    Surface(
+                        color = GajaColors.Success,
+                        shape = RoundedCornerShape(4.dp)
                     ) {
-                        SectionHeader(title = "자유 주행 정보")
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            MetricChip(label = "시작점", value = "현재 위치", modifier = Modifier.weight(1f))
-                            MetricChip(label = "기록 방식", value = "독립 기록", modifier = Modifier.weight(1f))
-                        }
+                        Text(
+                            "GPS READY",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White
+                        )
                     }
+                    Text(
+                        text = "자유 주행을 바로 시작할 수 있습니다",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color.White
+                    )
                 }
+            }
 
-                PrimaryActionButton(
-                    text = "자유 주행 시작",
-                    onClick = onStartRide,
+            SectionHeader(title = "주행 설정", subtitle = "현재 위치에서 즉시 기록을 시작합니다")
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
+                MetricChip(label = "시작 지점", value = "현재 위치", modifier = Modifier.weight(1f))
+                MetricChip(label = "기록 모드", value = "자유 주행", modifier = Modifier.weight(1f))
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
+                GajaPrimaryButton(
+                    text = "기록 시작",
+                    onClick = onStartRide
                 )
-
                 SecondaryActionButton(
-                    text = "뒤로 가기",
-                    onClick = onBack,
+                    text = "돌아가기",
+                    onClick = onBack
                 )
-                Spacer(modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()))
             }
-        }
-    }
-}
-
-@Composable
-private fun FreeRideHero() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.inverseSurface,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.inverseSurface,
-                            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
-                        ),
-                    ),
-                )
-                .padding(GajaSpacing.CardPadding),
-            verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium),
-        ) {
-            StatusBadge(text = "GPS 신호 양호", isActive = true)
-            Text(
-                text = "자유 주행을 바로 시작할 수 있습니다",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.inverseOnSurface,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small)) {
-                MetricChip(label = "위치 상태", value = "안정적", modifier = Modifier.weight(1f))
-                MetricChip(label = "기록 준비", value = "즉시 가능", modifier = Modifier.weight(1f))
-            }
+            Spacer(Modifier.height(40.dp))
         }
     }
 }
