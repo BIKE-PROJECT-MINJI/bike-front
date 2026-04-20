@@ -11,9 +11,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bikeprojectminji.bikefront.R
+
+private val GajaFontFamily = FontFamily(
+    Font(R.font.pretendard_regular, weight = FontWeight.Normal),
+    Font(R.font.pretendard_regular, weight = FontWeight.Medium),
+    Font(R.font.pretendard_bold, weight = FontWeight.Bold),
+    Font(R.font.pretendard_bold, weight = FontWeight.Black),
+)
 
 object GajaColors {
     val Primary = Color(0xFF994700)
@@ -95,80 +106,92 @@ private val DarkColorScheme = darkColorScheme(
 
 private val GajaTypography = Typography(
     displayLarge = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Black,
         fontSize = 40.sp,
-        lineHeight = 44.sp,
+        lineHeight = 46.sp,
         letterSpacing = (-1).sp,
         color = GajaColors.TextPrimary,
     ),
     displayMedium = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 32.sp,
-        lineHeight = 36.sp,
+        lineHeight = 38.sp,
         letterSpacing = (-0.5).sp,
         color = GajaColors.TextPrimary,
     ),
     headlineLarge = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
-        lineHeight = 34.sp,
+        lineHeight = 36.sp,
         color = GajaColors.TextPrimary,
     ),
     headlineMedium = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
-        lineHeight = 28.sp,
+        lineHeight = 30.sp,
         color = GajaColors.TextPrimary,
     ),
     titleLarge = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 19.sp,
-        lineHeight = 24.sp,
+        lineHeight = 28.sp,
         color = GajaColors.TextPrimary,
     ),
     titleMedium = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 16.sp,
-        lineHeight = 22.sp,
-        color = GajaColors.TextPrimary,
-    ),
-    bodyLarge = TextStyle(
-        fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         color = GajaColors.TextPrimary,
     ),
+    bodyLarge = TextStyle(
+        fontFamily = GajaFontFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 16.sp,
+        lineHeight = 26.sp,
+        color = GajaColors.TextPrimary,
+    ),
     bodyMedium = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
+        lineHeight = 22.sp,
         color = GajaColors.TextSecondary,
     ),
     bodySmall = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
-        lineHeight = 18.sp,
+        lineHeight = 19.sp,
         color = GajaColors.TextSecondary,
     ),
     labelLarge = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
-        lineHeight = 18.sp,
-        letterSpacing = 0.2.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.1.sp,
         color = GajaColors.TextPrimary,
     ),
     labelMedium = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.3.sp,
+        lineHeight = 18.sp,
+        letterSpacing = 0.2.sp,
         color = GajaColors.TextSecondary,
     ),
     labelSmall = TextStyle(
+        fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 11.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 0.7.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.4.sp,
         color = GajaColors.TextSecondary,
     ),
 )
