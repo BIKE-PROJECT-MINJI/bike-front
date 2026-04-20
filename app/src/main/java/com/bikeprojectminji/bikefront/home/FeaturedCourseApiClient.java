@@ -1,98 +1,83 @@
 package com.bikeprojectminji.bikefront.home;
 
 import com.bikeprojectminji.bikefront.config.AppConfig;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
-import java.net.HttpURLConnection;
-import java.net.URL;
-
-public class FeaturedCourseApiClient {
+public class FeaturedCourseApiClient implements FeaturedCourseRepository {
 
     public FeaturedCourseResponse fetchFeaturedCourses() throws Exception {
-        HttpURLConnection connection = null;
+        return loadFeaturedCourses();
+    }
 
+    @Override
+    public FeaturedCourseResponse loadFeaturedCourses() throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(AppConfig.API_BASE_URL + "/api/v1/courses/featured").openConnection();
         try {
-            URL url = new URL(AppConfig.API_BASE_URL + "/api/v1/courses/featured");
-            connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(AppConfig.CONNECT_TIMEOUT_MS);
             connection.setReadTimeout(AppConfig.READ_TIMEOUT_MS);
             connection.setRequestProperty("Accept", "application/json");
 
             int responseCode = connection.getResponseCode();
-            InputStream inputStream = responseCode >= HttpURLConnection.HTTP_BAD_REQUEST
-                    ? connection.getErrorStream()
-                    : connection.getInputStream();
-
+            InputStream inputStream = responseCode >= HttpURLConnection.HTTP_BAD_REQUEST ? connection.getErrorStream() : connection.getInputStream();
             if (inputStream == null) {
-                throw new IllegalStateException("빈 응답을 받았습니다.");
+                return new FeaturedCourseResponse(List.of());
             }
 
-            String responseBody = readBody(inputStream);
-
+            String body = readBody(inputStream);
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 throw new IllegalStateException("추천 코스를 불러오지 못했습니다.");
             }
 
-            JSONObject root = new JSONObject(responseBody);
-            JSONObject data = root.optJSONObject("data");
-
+            JSONObject data = new JSONObject(body).optJSONObject("data");
             if (data == null) {
-                throw new IllegalStateException("추천 코스 응답 형식이 올바르지 않습니다.");
+                return new FeaturedCourseResponse(List.of());
             }
 
-            String sortingMode = data.optString("sortingMode", "fallback");
             JSONArray coursesJson = data.optJSONArray("courses");
             List<FeaturedCourseUiModel> courses = new ArrayList<>();
-
             if (coursesJson != null) {
-                for (int i = 0; i < coursesJson.length(); i++) {
-                    JSONObject item = coursesJson.optJSONObject(i);
-
+                for (int index = 0; index < coursesJson.length(); index++) {
+                    JSONObject item = coursesJson.optJSONObject(index);
                     if (item == null) {
                         continue;
                     }
-
                     courses.add(new FeaturedCourseUiModel(
                             item.optLong("id"),
                             item.optString("title", ""),
-                            item.optDouble("distanceKm", 0),
+                            item.optDouble("distanceKm", 0.0),
                             item.optInt("estimatedDurationMin", 0),
-                            item.has("distanceFromUserM") && !item.isNull("distanceFromUserM")
-                                    ? item.optInt("distanceFromUserM")
-                                    : null,
-                            item.optInt("featuredRank", 0)
+                            item.optInt("featuredRank", index + 1)
                     ));
                 }
             }
-
-            return new FeaturedCourseResponse(sortingMode, courses);
+            return new FeaturedCourseResponse(courses);
         } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
+            connection.disconnect();
         }
     }
 
     private String readBody(InputStream inputStream) throws Exception {
         StringBuilder builder = new StringBuilder();
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            builder.append(line);
+        try {
+            String line = reader.readLine();
+            while (line != null) {
+                builder.append(line);
+                line = reader.readLine();
+            }
+            return builder.toString();
+        } finally {
+            reader.close();
         }
-
-        reader.close();
-        return builder.toString();
     }
 }

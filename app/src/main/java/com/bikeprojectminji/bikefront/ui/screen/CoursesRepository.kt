@@ -90,6 +90,40 @@ class CoursesRepository(
         }
     }
 
+    fun fetchCourseDetail(courseId: Long): CourseCardUiModel {
+        val connection = (URL(AppConfig.API_BASE_URL + "/api/v1/courses/$courseId").openConnection() as HttpURLConnection)
+
+        return try {
+            connection.requestMethod = "GET"
+            connection.connectTimeout = AppConfig.CONNECT_TIMEOUT_MS
+            connection.readTimeout = AppConfig.READ_TIMEOUT_MS
+            connection.setRequestProperty("Accept", "application/json")
+
+            val responseCode = connection.responseCode
+            val inputStream = if (responseCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
+                connection.errorStream
+            } else {
+                connection.inputStream
+            } ?: error("빈 응답을 받았습니다.")
+
+            val body = readBody(inputStream)
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                error("코스 정보를 불러오지 못했습니다.")
+            }
+
+            val data = JSONObject(body).optJSONObject("data")
+                ?: error("코스 상세 응답 형식이 올바르지 않습니다.")
+            CourseCardUiModel(
+                id = data.optLong("id"),
+                title = data.optString("title", ""),
+                distanceKm = data.optDouble("distanceKm", 0.0),
+                estimatedDurationMin = data.optInt("estimatedDurationMin", 0),
+            )
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     private fun readBody(inputStream: InputStream): String {
         val builder = StringBuilder()
         BufferedReader(InputStreamReader(inputStream, StandardCharsets.UTF_8)).use { reader ->

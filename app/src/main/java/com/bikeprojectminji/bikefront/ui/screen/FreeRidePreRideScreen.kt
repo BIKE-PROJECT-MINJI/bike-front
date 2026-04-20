@@ -1,34 +1,17 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.bikeprojectminji.bikefront.ui.theme.GajaColors
+import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 
 @Composable
 fun FreeRidePreRideScreen(
@@ -36,135 +19,74 @@ fun FreeRidePreRideScreen(
     onBack: () -> Unit,
     onStartRide: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)
-            .background(MaterialTheme.colorScheme.background),
-    ) {
-        // GAJA Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primary)
-                .padding(horizontal = 24.dp, vertical = 20.dp),
-        ) {
-            Text(
-                text = "자유 주행 준비",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary,
-            )
-        }
-
+    Scaffold(
+        topBar = { GajaBrandTopBar(title = "Free Ride") },
+        containerColor = GajaColors.Background
+    ) { scaffoldPadding ->
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(scaffoldPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = GajaSpacing.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)
         ) {
-            // Info Card
+            Spacer(Modifier.height(GajaSpacing.Small))
+
+            // Free Ride Hero Section
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(
-                        elevation = 4.dp,
-                        shape = RoundedCornerShape(16.dp),
-                        spotColor = Color(0x15000000),
-                    ),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = GajaColors.TextPrimary)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(GajaSpacing.Large),
+                    verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)
                 ) {
+                    Surface(
+                        color = GajaColors.Success,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            "GPS READY",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White
+                        )
+                    }
                     Text(
-                        text = "자유 주행 모드",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        text = "자유 주행을 바로 시작할 수 있습니다",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color.White
                     )
                     Text(
                         text = "코스 없이 바로 기록하는 모드입니다. 위치를 확보하면 ride 화면으로 진입하고 종료 후 기록 저장 흐름으로 이어집니다.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Color.White.copy(alpha = 0.82f)
                     )
                 }
             }
 
-            // Feature List
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(
-                        elevation = 2.dp,
-                        shape = RoundedCornerShape(16.dp),
-                        spotColor = Color(0x10000000),
-                    ),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                ),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    FeatureRow(
-                        icon = Icons.Default.LocationOn,
-                        text = "courseId 없이 시작합니다",
-                    )
-                    FeatureRow(
-                        icon = Icons.Default.CheckCircle,
-                        text = "현재 위치 포인터가 우선이어야 합니다",
-                    )
-                    FeatureRow(
-                        icon = Icons.Default.Save,
-                        text = "종료 후 기록 코스를 전체 코스에 반영하는 흐름으로 이어집니다",
-                    )
-                }
+            SectionHeader(title = "주행 설정", subtitle = "현재 위치에서 즉시 기록을 시작합니다")
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
+                MetricChip(label = "시작 지점", value = "현재 위치", modifier = Modifier.weight(1f))
+                MetricChip(label = "기록 모드", value = "자유 주행", modifier = Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
 
-            // Action Buttons
-            GajaPrimaryCard(
-                title = "시작 준비",
-                description = "자유 주행을 시작하려면 아래 버튼을 눌러주세요.",
-                buttonText = "자유 주행 시작",
-                onClick = onStartRide,
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            GajaOutlinedButton(
-                text = "뒤로 가기",
-                onClick = onBack,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
+                GajaPrimaryButton(
+                    text = "기록 시작",
+                    onClick = onStartRide
+                )
+                SecondaryActionButton(
+                    text = "돌아가기",
+                    onClick = onBack
+                )
+            }
+            Spacer(Modifier.height(40.dp))
         }
-    }
-}
-
-@Composable
-private fun FeatureRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    text: String,
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(top = 2.dp),
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
