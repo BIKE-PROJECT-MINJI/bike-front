@@ -64,6 +64,7 @@ fun GajaMapPreview(
     courseId: Long? = null,
     mode: MapDisplayMode = MapDisplayMode.PREVIEW,
     locationPermissionGranted: Boolean = false,
+    onRoutePointsLoaded: ((List<CourseRoutePointsGateway.RoutePoint>) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -79,16 +80,19 @@ fun GajaMapPreview(
     LaunchedEffect(courseId) {
         if (courseId == null || courseId <= 0L) {
             routeState = RouteState.Idle
+            onRoutePointsLoaded?.invoke(emptyList())
             return@LaunchedEffect
         }
         routeState = RouteState.Loading
         gateway.loadRoutePoints(courseId, object : CourseRoutePointsGateway.Callback {
             override fun onSuccess(result: CourseRoutePointsGateway.RoutePointsResult) {
                 routeState = RouteState.Success(result.points)
+                onRoutePointsLoaded?.invoke(result.points)
             }
 
             override fun onFailure(message: String) {
                 routeState = RouteState.Error(message)
+                onRoutePointsLoaded?.invoke(emptyList())
             }
         })
     }
