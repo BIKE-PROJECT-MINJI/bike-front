@@ -4,17 +4,9 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -22,8 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.bikeprojectminji.bikefront.R
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
-import com.bikeprojectminji.bikefront.ui.screen.SectionTitle
-import com.bikeprojectminji.bikefront.ui.theme.BikeFrontTheme
+import com.bikeprojectminji.bikefront.ui.screen.GajaBrandTopBar
+import com.bikeprojectminji.bikefront.ui.screen.GajaPrimaryButton
+import com.bikeprojectminji.bikefront.ui.screen.SecondaryActionButton
+import com.bikeprojectminji.bikefront.ui.screen.SectionHeader
+import com.bikeprojectminji.bikefront.ui.theme.GajaColors
+import com.bikeprojectminji.bikefront.ui.theme.GajaTheme
+import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 
 class CourseEditorActivity : ComponentActivity() {
 
@@ -38,34 +35,34 @@ class CourseEditorActivity : ComponentActivity() {
     private lateinit var courseWriteGateway: CourseWriteGateway
     private lateinit var recordedCourseStore: RecordedCourseStore
 
-    private var title by mutableStateOf("")
-    private var description by mutableStateOf("")
-    private var visibility by mutableStateOf("PRIVATE")
-    private var helperMessage by mutableStateOf("")
-    private var inFlight by mutableStateOf(false)
+    private var titleState by mutableStateOf("")
+    private var descriptionState by mutableStateOf("")
+    private var visibilityState by mutableStateOf("PRIVATE")
+    private var helperMessageState by mutableStateOf("")
+    private var inFlightState by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         authSessionStore = AuthSessionStore(this)
         courseWriteGateway = HttpCourseWriteGateway()
         recordedCourseStore = RecordedCourseStore(this)
-        helperMessage = getString(R.string.course_editor_helper_default)
+        helperMessageState = getString(R.string.course_editor_helper_default)
 
         setContent {
-            BikeFrontTheme {
+            GajaTheme {
                 CourseEditorScreen(
                     sourceSummary = intent.getStringExtra(EXTRA_SOURCE_SUMMARY).orEmpty(),
-                    title = title,
-                    description = description,
-                    visibility = visibility,
-                    helperMessage = helperMessage,
-                    inFlight = inFlight,
-                    onTitleChange = { title = it },
-                    onDescriptionChange = { description = it },
-                    onVisibilityChange = { visibility = it },
+                    title = titleState,
+                    description = descriptionState,
+                    visibility = visibilityState,
+                    helperMessage = helperMessageState,
+                    inFlight = inFlightState,
+                    onTitleChange = { titleState = it },
+                    onDescriptionChange = { descriptionState = it },
+                    onVisibilityChange = { visibilityState = it },
                     onSave = { saveCourse() },
                     onShare = {
-                        helperMessage = getString(R.string.course_editor_share_ready_message)
+                        helperMessageState = getString(R.string.course_editor_share_ready_message)
                         Toast.makeText(this, R.string.course_editor_share_ready_toast, Toast.LENGTH_SHORT).show()
                     },
                 )
@@ -74,38 +71,38 @@ class CourseEditorActivity : ComponentActivity() {
     }
 
     private fun saveCourse() {
-        val safeTitle = title.trim()
-        val safeDescription = description.trim()
+        val safeTitle = titleState.trim()
+        val safeDescription = descriptionState.trim()
         if (safeTitle.isBlank()) {
-            helperMessage = getString(R.string.course_editor_title_required_message)
+            helperMessageState = getString(R.string.course_editor_title_required_message)
             return
         }
 
         val rideRecordId = intent.getLongExtra(EXTRA_RIDE_RECORD_ID, -1L)
         if (rideRecordId <= 0L) {
-            helperMessage = getString(R.string.course_editor_missing_source_message)
+            helperMessageState = getString(R.string.course_editor_missing_source_message)
             return
         }
 
         val accessToken = authSessionStore.accessToken
         if (accessToken.isBlank()) {
-            helperMessage = getString(R.string.course_editor_login_required_message)
+            helperMessageState = getString(R.string.course_editor_login_required_message)
             return
         }
 
-        inFlight = true
-        helperMessage = getString(R.string.course_editor_saving_message)
+        inFlightState = true
+        helperMessageState = getString(R.string.course_editor_saving_message)
         courseWriteGateway.createCourse(
             accessToken,
             CourseWriteGateway.CreateCourseDraft(
                 rideRecordId,
                 safeTitle,
                 safeDescription,
-                visibility,
+                visibilityState,
             ),
             object : CourseWriteGateway.Callback {
                 override fun onSuccess(result: CourseWriteGateway.CourseCreateResult) {
-                    inFlight = false
+                    inFlightState = false
                     recordedCourseStore.save(
                         RecordedCourseItem(
                             id = result.courseId,
@@ -114,85 +111,115 @@ class CourseEditorActivity : ComponentActivity() {
                             estimatedDurationMin = intent.getIntExtra(EXTRA_DURATION_MIN, 0),
                         ),
                     )
-                    helperMessage = getString(R.string.course_editor_save_success_message, result.courseId, result.visibility)
+                    helperMessageState = getString(R.string.course_editor_save_success_message, result.courseId, result.visibility)
                     Toast.makeText(this@CourseEditorActivity, R.string.course_editor_save_success_toast, Toast.LENGTH_SHORT).show()
                 }
 
                 override fun onFailure(message: String) {
-                    inFlight = false
-                    helperMessage = message
+                    inFlightState = false
+                    helperMessageState = message
                 }
             },
         )
     }
-}
 
-@Suppress("LongParameterList")
-@androidx.compose.runtime.Composable
-private fun CourseEditorScreen(
-    sourceSummary: String,
-    title: String,
-    description: String,
-    visibility: String,
-    helperMessage: String,
-    inFlight: Boolean,
-    onTitleChange: (String) -> Unit,
-    onDescriptionChange: (String) -> Unit,
-    onVisibilityChange: (String) -> Unit,
-    onSave: () -> Unit,
-    onShare: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    @Composable
+    private fun CourseEditorScreen(
+        sourceSummary: String,
+        title: String,
+        description: String,
+        visibility: String,
+        helperMessage: String,
+        inFlight: Boolean,
+        onTitleChange: (String) -> Unit,
+        onDescriptionChange: (String) -> Unit,
+        onVisibilityChange: (String) -> Unit,
+        onSave: () -> Unit,
+        onShare: () -> Unit,
     ) {
-        SectionTitle(
-            title = "코스 초안 정리",
-            subtitle = sourceSummary.ifBlank { "주행 기록을 바탕으로 코스를 정리합니다." },
-        )
+        Scaffold(
+            topBar = { GajaBrandTopBar(title = "Course Editor") },
+            containerColor = GajaColors.Background
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = GajaSpacing.ScreenPadding),
+                verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)
+            ) {
+                Spacer(Modifier.height(GajaSpacing.Small))
 
-        OutlinedTextField(
-            value = title,
-            onValueChange = onTitleChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("코스 제목") },
-            placeholder = { Text("예: 퇴근길 한강 코스") },
-            singleLine = true,
-        )
-
-        OutlinedTextField(
-            value = description,
-            onValueChange = onDescriptionChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("설명") },
-            placeholder = { Text("오늘 주행 느낌이나 경로 특징을 간단히 남겨 주세요.") },
-            minLines = 4,
-        )
-
-        Text(text = "공개 범위", style = MaterialTheme.typography.titleMedium)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(
-                "PRIVATE" to "비공개",
-                "UNLISTED" to "링크 공유",
-                "PUBLIC" to "공개",
-            ).forEach { (value, label) ->
-                FilterChip(
-                    selected = visibility == value,
-                    onClick = { onVisibilityChange(value) },
-                    label = { Text(label) },
+                SectionHeader(
+                    title = "코스 정보 입력",
+                    subtitle = sourceSummary.ifBlank { "라이딩 데이터를 코스로 변환합니다." }
                 )
+
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = onTitleChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("코스 제목") },
+                    placeholder = { Text("예: 한강 북단 평지 코스") },
+                    shape = MaterialTheme.shapes.medium,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = GajaColors.Primary,
+                        unfocusedBorderColor = GajaColors.Border,
+                        focusedTextColor = GajaColors.TextPrimary,
+                        unfocusedTextColor = GajaColors.TextPrimary
+                    )
+                )
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = onDescriptionChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("설명") },
+                    placeholder = { Text("경로의 특징이나 기억할 점을 기록하세요.") },
+                    minLines = 3,
+                    shape = MaterialTheme.shapes.medium,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = GajaColors.Primary,
+                        unfocusedBorderColor = GajaColors.Border,
+                        focusedTextColor = GajaColors.TextPrimary,
+                        unfocusedTextColor = GajaColors.TextPrimary
+                    )
+                )
+
+                SectionHeader(title = "공개 범위")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("PRIVATE" to "비공개", "UNLISTED" to "링크", "PUBLIC" to "공개").forEach { (v, l) ->
+                        FilterChip(
+                            selected = visibility == v,
+                            onClick = { onVisibilityChange(v) },
+                            label = { Text(l) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = GajaColors.Primary,
+                                selectedLabelColor = GajaColors.White,
+                                labelColor = GajaColors.TextSecondary
+                            )
+                        )
+                    }
+                }
+
+                Text(text = helperMessage, style = MaterialTheme.typography.bodySmall, color = GajaColors.TextSecondary)
+
+                Spacer(Modifier.weight(1f))
+
+                Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
+                    GajaPrimaryButton(
+                        text = if (inFlight) "저장 중..." else "코스 저장하기",
+                        enabled = !inFlight,
+                        onClick = onSave
+                    )
+                    SecondaryActionButton(
+                        text = "공유 옵션 보기",
+                        enabled = !inFlight,
+                        onClick = onShare
+                    )
+                }
+                Spacer(Modifier.height(GajaSpacing.Large))
             }
-        }
-
-        Text(text = helperMessage, style = MaterialTheme.typography.bodyMedium)
-
-        Button(onClick = onSave, enabled = !inFlight, modifier = Modifier.fillMaxWidth()) {
-            Text(if (inFlight) "저장 중" else "코스 저장 준비")
-        }
-        OutlinedButton(onClick = onShare, enabled = !inFlight, modifier = Modifier.fillMaxWidth()) {
-            Text("공유 방식 보기")
         }
     }
 }
