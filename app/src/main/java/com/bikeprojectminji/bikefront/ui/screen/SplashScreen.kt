@@ -1,11 +1,10 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -14,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,20 +52,20 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
         ) {
             // GAJA Brand Icon (Bike Pictogram)
             Icon(
-                imageVector = Icons.Default.DirectionsBike,
+                imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
                 contentDescription = "GAJA Logo",
-                modifier = Modifier.size(100.dp),
+                modifier = Modifier.size(120.dp),
                 tint = GajaColors.LimeAccent
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
             // GAJA Brand Text
             Text(
                 text = "GAJA",
                 style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 48.sp,
-                    letterSpacing = 4.sp,
+                    fontSize = 56.sp,
+                    letterSpacing = 6.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White
                 )
@@ -74,16 +74,9 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
             Text(
                 text = "Ride Your Discovery",
                 style = MaterialTheme.typography.labelLarge,
-                color = GajaColors.LimeAccent.copy(alpha = 0.8f),
-                modifier = Modifier.padding(top = 8.dp)
+                color = GajaColors.LimeAccent.copy(alpha = 0.9f),
+                modifier = Modifier.padding(top = 12.dp)
             )
         }
     }
 }
-
-// Extension to use in GraphicsLayer
-private fun Modifier.graphicsLayer(alpha: Float): Modifier = this.then(
-    androidx.compose.ui.graphics.graphicsLayer {
-        this.alpha = alpha
-    }
-)
