@@ -59,6 +59,11 @@ fun FreeRidePreRideScreen(
                         style = MaterialTheme.typography.headlineLarge,
                         color = Color.White
                     )
+                    Text(
+                        text = "코스 없이 바로 기록하는 모드입니다. 위치를 확보하면 ride 화면으로 진입하고 종료 후 기록 저장 흐름으로 이어집니다.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.82f)
+                    )
                 }
             }
 
