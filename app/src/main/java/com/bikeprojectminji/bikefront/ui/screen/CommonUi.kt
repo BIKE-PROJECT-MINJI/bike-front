@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
@@ -77,13 +76,20 @@ fun GajaBrandTopBar(
                 ) {
                     Icon(Icons.Default.Person, contentDescription = null, tint = GajaColors.TextSecondary)
                 }
-                Text(
-                    text = "gaja",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = GajaColors.PrimaryContainer,
-                    fontStyle = FontStyle.Italic,
-                    fontWeight = FontWeight.Black,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = "gaja",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = GajaColors.PrimaryContainer,
+                        fontStyle = FontStyle.Italic,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = GajaColors.TextSecondary,
+                    )
+                }
             }
         },
         actions = actions,
@@ -294,7 +300,7 @@ fun CourseCard(
                     text = if (course.isRecorded) {
                         "기록 코스 • ${formatCourseDistance(course.distanceKm)} • ${course.estimatedDurationMin}분"
                     } else {
-                        "추천 코스 • ${formatCourseDistance(course.distanceKm)} • ${course.estimatedDurationMin}분"
+                        "코스 정보 • ${formatCourseDistance(course.distanceKm)} • ${course.estimatedDurationMin}분"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = GajaColors.TextSecondary,
