@@ -10,38 +10,50 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(onAnimationFinished: () -> Unit) {
-    var startAnimation by remember { mutableStateOf(false) }
-    val alphaAnim by animateFloatAsState(
-        targetValue = if (startAnimation) 1f else 0f,
-        animationSpec = tween(durationMillis = 900),
-        label = "alpha",
+    var rawProgress by remember { mutableFloatStateOf(0f) }
+    var statusText by remember { mutableStateOf("앱 시작 중") }
+    val animatedProgress by animateFloatAsState(
+        targetValue = rawProgress,
+        animationSpec = tween(durationMillis = 420),
+        label = "splash-progress",
     )
 
-    LaunchedEffect(true) {
-        startAnimation = true
-        delay(1800)
+    LaunchedEffect(Unit) {
+        val steps = listOf(
+            0.12f to "앱 시작 중",
+            0.38f to "사용자 정보 확인 중",
+            0.72f to "홈 화면 준비 중",
+            1f to "곧 시작합니다",
+        )
+        steps.forEachIndexed { index, (progress, message) ->
+            statusText = message
+            rawProgress = progress
+            delay(if (index == steps.lastIndex) 260 else 360)
+        }
+        delay(220)
         onAnimationFinished()
     }
 
@@ -49,21 +61,20 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(GajaColors.SurfaceContainerLow),
-            contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.alpha(alphaAnim),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Box(
                 modifier = Modifier
-                    .width(160.dp)
-                    .height(160.dp)
+                    .width(168.dp)
+                    .height(168.dp)
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                GajaColors.PrimaryContainer.copy(alpha = 0.24f),
+                                GajaColors.PrimaryContainer.copy(alpha = 0.22f),
                                 GajaColors.SurfaceContainerLow,
                             ),
                         ),
@@ -75,32 +86,34 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
                     text = "gaja",
                     style = MaterialTheme.typography.displayLarge,
                     color = GajaColors.PrimaryContainer,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    fontWeight = FontWeight.Black,
+                    fontStyle = FontStyle.Italic,
                 )
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(36.dp))
 
-            Surface(
-                color = GajaColors.SurfaceContainerHigh,
-                shape = MaterialTheme.shapes.small,
-            ) {
-                Box(modifier = Modifier.width(160.dp).height(6.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.45f)
-                            .height(6.dp)
-                            .background(Brush.horizontalGradient(GajaColors.BrandGradient), MaterialTheme.shapes.small),
-                    )
-                }
-            }
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .width(180.dp)
+                    .height(8.dp),
+                color = GajaColors.PrimaryContainer,
+                trackColor = GajaColors.SurfaceContainerHigh,
+                gapSize = 0.dp,
+                drawStopIndicator = {},
+            )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "주행을 준비하고 있습니다...",
+                text = statusText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = GajaColors.TextSecondary,
+            )
+            Text(
+                text = "${(animatedProgress * 100).toInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = GajaColors.TextTertiary,
             )
         }
     }
