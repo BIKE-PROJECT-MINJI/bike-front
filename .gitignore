@@ -9,3 +9,7 @@
 /app/.classpath
 /app/.project
 /app/.settings/
+/signing.local.properties
+/keystore/
+*.jks
+*.keystore
