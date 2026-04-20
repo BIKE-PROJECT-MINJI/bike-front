@@ -38,6 +38,7 @@ fun RideStartScreen(
     innerPadding: PaddingValues,
     onStartFreeRide: () -> Unit,
     onOpenCourse: (CourseCardUiModel) -> Unit,
+    onOpenMyInfo: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -58,21 +59,26 @@ fun RideStartScreen(
     }
 
     LaunchedEffect(refreshKey) {
-        featuredState = SectionState.Loading
-        listState = SectionState.Loading
+        if (featuredState !is SectionState.Success) featuredState = SectionState.Loading
+        if (listState !is SectionState.Success) listState = SectionState.Loading
 
         launch {
             val result = runCatching { withContext(Dispatchers.IO) { repository.fetchFeaturedCourses() } }
             featuredState = result.fold({ SectionState.Success(it) }, { SectionState.Error("추천 코스 로드 실패") })
         }
         launch {
-            val result = runCatching { withContext(Dispatchers.IO) { repository.fetchAllCourses(limit = 10) } }
+            val result = runCatching { withContext(Dispatchers.IO) { repository.fetchAllCourses(limit = 5) } }
             listState = result.fold({ SectionState.Success(it) }, { SectionState.Error("전체 목록 로드 실패") })
         }
     }
 
     Scaffold(
-        topBar = { GajaBrandTopBar(title = "홈") },
+        topBar = {
+            GajaBrandTopBar(
+                title = "홈",
+                onProfileClick = onOpenMyInfo,
+            )
+        },
         containerColor = GajaColors.Background,
     ) { scaffoldPadding ->
         Column(
@@ -130,7 +136,7 @@ fun RideStartScreen(
                                     coroutineScope.launch {
                                         loadingMore = true
                                         val next = runCatching {
-                                            withContext(Dispatchers.IO) { repository.fetchAllCourses(cursor = nextCursor) }
+                                            withContext(Dispatchers.IO) { repository.fetchAllCourses(cursor = nextCursor, limit = 5) }
                                         }
                                         next.onSuccess { newData ->
                                             listState = SectionState.Success(
@@ -144,6 +150,12 @@ fun RideStartScreen(
                                         loadingMore = false
                                     }
                                 },
+                            )
+                        } else {
+                            Text(
+                                text = "지금 표시 중인 코스가 전체입니다.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = GajaColors.TextTertiary,
                             )
                         }
                     }

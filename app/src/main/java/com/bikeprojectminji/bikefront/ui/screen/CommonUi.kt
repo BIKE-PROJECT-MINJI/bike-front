@@ -55,6 +55,7 @@ import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 @Composable
 fun GajaBrandTopBar(
     title: String,
+    onProfileClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {
         IconButton(onClick = { }) {
             Icon(Icons.Default.Notifications, contentDescription = null, tint = GajaColors.Primary)
@@ -71,7 +72,8 @@ fun GajaBrandTopBar(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(GajaColors.SurfaceContainerHigh),
+                        .background(GajaColors.SurfaceContainerHigh)
+                        .clickable(enabled = onProfileClick != null) { onProfileClick?.invoke() },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Default.Person, contentDescription = null, tint = GajaColors.TextSecondary)
