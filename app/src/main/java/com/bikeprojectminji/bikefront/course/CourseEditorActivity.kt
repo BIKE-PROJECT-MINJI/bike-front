@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.bikeprojectminji.bikefront.R
+import com.bikeprojectminji.bikefront.analytics.AnalyticsTracker
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import com.bikeprojectminji.bikefront.ui.screen.BikeSurfaceCard
 import com.bikeprojectminji.bikefront.ui.screen.GajaBrandTopBar
@@ -36,6 +37,7 @@ class CourseEditorActivity : ComponentActivity() {
     private lateinit var authSessionStore: AuthSessionStore
     private lateinit var courseWriteGateway: CourseWriteGateway
     private lateinit var recordedCourseStore: RecordedCourseStore
+    private lateinit var analyticsTracker: AnalyticsTracker
 
     private var titleState by mutableStateOf("")
     private var descriptionState by mutableStateOf("")
@@ -48,6 +50,7 @@ class CourseEditorActivity : ComponentActivity() {
         authSessionStore = AuthSessionStore(this)
         courseWriteGateway = HttpCourseWriteGateway()
         recordedCourseStore = RecordedCourseStore(this)
+        analyticsTracker = AnalyticsTracker(this)
         helperMessageState = getString(R.string.course_editor_helper_default)
 
         setContent {
@@ -105,6 +108,7 @@ class CourseEditorActivity : ComponentActivity() {
             object : CourseWriteGateway.Callback {
                 override fun onSuccess(result: CourseWriteGateway.CourseCreateResult) {
                     inFlightState = false
+                    analyticsTracker.track("course_create_completed", "course_editor", mapOf("courseId" to result.courseId, "rideRecordId" to rideRecordId, "visibility" to result.visibility))
                     recordedCourseStore.save(
                         RecordedCourseItem(
                             id = result.courseId,

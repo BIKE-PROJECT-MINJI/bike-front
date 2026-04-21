@@ -7,12 +7,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.bikeprojectminji.bikefront.analytics.AnalyticsTracker
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 
@@ -22,6 +25,8 @@ fun FreeRidePreRideScreen(
     onBack: () -> Unit,
     onStartRide: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val analyticsTracker = remember(context) { AnalyticsTracker(context) }
     Box(modifier = Modifier.fillMaxSize().background(GajaColors.Background)) {
         GajaMapPreview(
             modifier = Modifier.fillMaxSize(),
@@ -98,7 +103,10 @@ fun FreeRidePreRideScreen(
                 }
                 GajaPrimaryButton(
                     text = "주행 시작",
-                    onClick = onStartRide,
+                    onClick = {
+                        analyticsTracker.track("ride_start_clicked", "free_ride_pre", mapOf("button" to "start_ride"))
+                        onStartRide()
+                    },
                     icon = Icons.AutoMirrored.Filled.ArrowForward,
                 )
                 SecondaryActionButton(text = "돌아가기", onClick = onBack)

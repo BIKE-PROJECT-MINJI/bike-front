@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bikeprojectminji.bikefront.BuildConfig
+import com.bikeprojectminji.bikefront.analytics.AnalyticsTracker
 import com.bikeprojectminji.bikefront.R
 import com.bikeprojectminji.bikefront.auth.AuthProfileActivity
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
@@ -72,6 +73,7 @@ class FreeRideActivity : ComponentActivity() {
 fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     val context = LocalContext.current
     val authSessionStore = remember { AuthSessionStore(context) }
+    val analyticsTracker = remember(context) { AnalyticsTracker(context) }
     val rideRecordGateway = remember { HttpRideRecordGateway() }
     val weatherGateway = remember { HttpCurrentWeatherGateway() }
     val ridePolicyGateway = remember { HttpRidePolicyEvaluationGateway() }
@@ -100,6 +102,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     }
 
     LaunchedEffect(Unit) {
+        analyticsTracker.track("ride_started", "ride_hud", mapOf("courseId" to courseId, "startedFrom" to if (courseId != null) "course_detail" else "free_ride"))
         if (!locationGranted) permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
