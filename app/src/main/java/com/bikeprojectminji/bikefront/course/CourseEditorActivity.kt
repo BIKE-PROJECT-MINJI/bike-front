@@ -14,7 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.bikeprojectminji.bikefront.R
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
+import com.bikeprojectminji.bikefront.ui.screen.BikeSurfaceCard
 import com.bikeprojectminji.bikefront.ui.screen.GajaBrandTopBar
+import com.bikeprojectminji.bikefront.ui.screen.HeroCard
 import com.bikeprojectminji.bikefront.ui.screen.GajaPrimaryButton
 import com.bikeprojectminji.bikefront.ui.screen.SecondaryActionButton
 import com.bikeprojectminji.bikefront.ui.screen.SectionHeader
@@ -138,7 +140,7 @@ class CourseEditorActivity : ComponentActivity() {
         onShare: () -> Unit,
     ) {
         Scaffold(
-            topBar = { GajaBrandTopBar(title = "Course Editor") },
+            topBar = { GajaBrandTopBar(title = "코스 편집") },
             containerColor = GajaColors.Background
         ) { innerPadding ->
             Column(
@@ -150,9 +152,17 @@ class CourseEditorActivity : ComponentActivity() {
             ) {
                 Spacer(Modifier.height(GajaSpacing.Small))
 
+                HeroCard(
+                    title = "코스 초안 다듬기",
+                    description = sourceSummary.ifBlank { "저장할 코스 정보를 정리하고 공개 범위를 설정합니다." },
+                    buttonText = "공개 범위 확인",
+                    onClick = onShare,
+                    icon = "course"
+                )
+
                 SectionHeader(
                     title = "코스 정보 입력",
-                    subtitle = sourceSummary.ifBlank { "라이딩 데이터를 코스로 변환합니다." }
+                    subtitle = "코스 이름과 공개 범위를 정리한 뒤 저장합니다."
                 )
 
                 OutlinedTextField(
@@ -202,7 +212,7 @@ class CourseEditorActivity : ComponentActivity() {
                     }
                 }
 
-                Text(text = helperMessage, style = MaterialTheme.typography.bodySmall, color = GajaColors.TextSecondary)
+                BikeSurfaceCard { Text(text = helperMessage, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = GajaColors.TextSecondary) }
 
                 Spacer(Modifier.weight(1f))
 

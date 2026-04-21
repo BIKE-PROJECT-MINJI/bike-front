@@ -67,8 +67,9 @@ public class HttpRideRecordGateway implements RideRecordGateway {
                 if (responseCode >= 200 && responseCode < 300) {
                     JSONObject data = root.optJSONObject("data");
                     long rideRecordId = data == null ? -1L : data.optLong("rideRecordId", -1L);
+                    String finalizationStatus = data == null ? "FINALIZING" : data.optString("finalizationStatus", "FINALIZING");
                     long finalRideRecordId = rideRecordId;
-                    mainHandler.post(() -> callback.onSuccess(new RideRecordSaveResult(finalRideRecordId)));
+                    mainHandler.post(() -> callback.onSuccess(new RideRecordSaveResult(finalRideRecordId, finalizationStatus)));
                     return;
                 }
                 String message = root.optString("message", "주행 기록을 저장하지 못했습니다.");
@@ -81,6 +82,57 @@ public class HttpRideRecordGateway implements RideRecordGateway {
                 }
             }
         });
+    }
+
+    @Override
+    public void getRideRecordStatus(String accessToken, long rideRecordId, StatusCallback callback) {
+        executorService.execute(() -> requestRideRecordStatus("GET", accessToken, rideRecordId, callback));
+    }
+
+    @Override
+    public void regenerateRideRecord(String accessToken, long rideRecordId, StatusCallback callback) {
+        executorService.execute(() -> requestRideRecordStatus("POST", accessToken, rideRecordId, callback));
+    }
+
+    private void requestRideRecordStatus(String method, String accessToken, long rideRecordId, StatusCallback callback) {
+        HttpURLConnection connection = null;
+        try {
+            String path = method.equals("POST")
+                    ? "/api/v1/ride-records/" + rideRecordId + "/regenerate"
+                    : "/api/v1/ride-records/" + rideRecordId;
+            URL url = new URL(AppConfig.API_BASE_URL + path);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(AppConfig.CONNECT_TIMEOUT_MS);
+            connection.setReadTimeout(AppConfig.READ_TIMEOUT_MS);
+            connection.setRequestMethod(method);
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+            if (method.equals("POST")) {
+                connection.setDoOutput(true);
+            }
+
+            int responseCode = connection.getResponseCode();
+            String responseText = readBody(responseCode >= 400 ? connection.getErrorStream() : connection.getInputStream());
+            JSONObject root = responseText.isBlank() ? new JSONObject() : new JSONObject(responseText);
+            if (responseCode >= 200 && responseCode < 300) {
+                JSONObject data = root.optJSONObject("data");
+                RideRecordFinalizationStatusResult result = new RideRecordFinalizationStatusResult(
+                        data == null ? rideRecordId : data.optLong("rideRecordId", rideRecordId),
+                        data == null ? "FAILED" : data.optString("status", "FAILED"),
+                        data == null ? null : data.optString("errorMessage", null)
+                );
+                mainHandler.post(() -> callback.onSuccess(result));
+                return;
+            }
+            String message = root.optString("message", "주행 기록 상태를 확인하지 못했습니다.");
+            mainHandler.post(() -> callback.onFailure(message));
+        } catch (Exception exception) {
+            mainHandler.post(() -> callback.onFailure("주행 기록 상태를 확인하지 못했습니다. 서버 상태를 다시 확인해 주세요."));
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
     }
 
     private String readBody(InputStream inputStream) throws Exception {

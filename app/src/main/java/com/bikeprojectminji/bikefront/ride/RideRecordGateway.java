@@ -7,8 +7,18 @@ public interface RideRecordGateway {
 
     void saveRideRecord(String accessToken, RideRecordDraft draft, Callback callback);
 
+    void getRideRecordStatus(String accessToken, long rideRecordId, StatusCallback callback);
+
+    void regenerateRideRecord(String accessToken, long rideRecordId, StatusCallback callback);
+
     interface Callback {
         void onSuccess(RideRecordSaveResult result);
+
+        void onFailure(String message);
+    }
+
+    interface StatusCallback {
+        void onSuccess(RideRecordFinalizationStatusResult result);
 
         void onFailure(String message);
     }
@@ -53,11 +63,33 @@ public interface RideRecordGateway {
 
     class RideRecordSaveResult {
         private final long rideRecordId;
+        private final String finalizationStatus;
 
-        public RideRecordSaveResult(long rideRecordId) {
+        public RideRecordSaveResult(long rideRecordId, String finalizationStatus) {
             this.rideRecordId = rideRecordId;
+            this.finalizationStatus = finalizationStatus;
         }
 
         public long getRideRecordId() { return rideRecordId; }
+
+        public String getFinalizationStatus() { return finalizationStatus; }
+    }
+
+    class RideRecordFinalizationStatusResult {
+        private final long rideRecordId;
+        private final String status;
+        private final String errorMessage;
+
+        public RideRecordFinalizationStatusResult(long rideRecordId, String status, String errorMessage) {
+            this.rideRecordId = rideRecordId;
+            this.status = status;
+            this.errorMessage = errorMessage;
+        }
+
+        public long getRideRecordId() { return rideRecordId; }
+
+        public String getStatus() { return status; }
+
+        public String getErrorMessage() { return errorMessage; }
     }
 }
