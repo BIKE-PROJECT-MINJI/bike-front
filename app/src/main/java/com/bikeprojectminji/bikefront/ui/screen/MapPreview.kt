@@ -52,6 +52,12 @@ private const val ROUTE_SOURCE_ID = "gaja-route-source"
 private const val ROUTE_LAYER_ID = "gaja-route-layer"
 private val SEOUL_CITY_HALL = LatLng(37.5665, 126.9780)
 
+data class MapViewportActions(
+    val recenter: () -> Unit,
+    val zoomIn: () -> Unit,
+    val zoomOut: () -> Unit,
+)
+
 enum class MapDisplayMode {
     PREVIEW,
     RIDE,
@@ -65,6 +71,7 @@ fun GajaMapPreview(
     mode: MapDisplayMode = MapDisplayMode.PREVIEW,
     locationPermissionGranted: Boolean = false,
     onRoutePointsLoaded: ((List<CourseRoutePointsGateway.RoutePoint>) -> Unit)? = null,
+    onViewportActionsReady: ((MapViewportActions) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -76,6 +83,30 @@ fun GajaMapPreview(
         locationPermissionGranted = locationPermissionGranted,
     )
     var routeState by remember(courseId) { mutableStateOf<RouteState>(RouteState.Idle) }
+    val viewportActions = remember(mapView) {
+        MapViewportActions(
+            recenter = {
+                mapView.getMapAsync { mapLibreMap ->
+                    val location = mapLibreMap.locationComponent.lastKnownLocation
+                    if (location != null) {
+                        mapLibreMap.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), 15.5), 500)
+                    } else {
+                        mapLibreMap.animateCamera(CameraUpdateFactory.newLatLngZoom(SEOUL_CITY_HALL, 14.0), 500)
+                    }
+                }
+            },
+            zoomIn = {
+                mapView.getMapAsync { mapLibreMap ->
+                    mapLibreMap.animateCamera(CameraUpdateFactory.zoomTo(mapLibreMap.cameraPosition.zoom + 1.0), 300)
+                }
+            },
+            zoomOut = {
+                mapView.getMapAsync { mapLibreMap ->
+                    mapLibreMap.animateCamera(CameraUpdateFactory.zoomTo(mapLibreMap.cameraPosition.zoom - 1.0), 300)
+                }
+            },
+        )
+    }
 
     LaunchedEffect(courseId) {
         if (courseId == null || courseId <= 0L) {
@@ -105,6 +136,10 @@ fun GajaMapPreview(
         updateLocationComponent(mapView, context, locationPermissionGranted)
     }
 
+    LaunchedEffect(viewportActions) {
+        onViewportActionsReady?.invoke(viewportActions)
+    }
+
     AndroidView(
         factory = { mapView },
         modifier = modifier
@@ -132,6 +167,9 @@ private fun rememberMapViewWithLifecycle(
         MapView(context).apply {
             onCreate(Bundle())
             getMapAsync { mapLibreMap ->
+                if (mode == MapDisplayMode.PREVIEW) {
+                    mapLibreMap.uiSettings.setAllGesturesEnabled(false)
+                }
                 mapLibreMap.setStyle(Style.Builder().fromUri(AppConfig.MAP_STYLE_URL)) { style ->
                     if (style.getSource(ROUTE_SOURCE_ID) == null) {
                         style.addSource(GeoJsonSource(ROUTE_SOURCE_ID, FeatureCollection.fromFeatures(emptyArray())))
