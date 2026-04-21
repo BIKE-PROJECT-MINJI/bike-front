@@ -1,6 +1,9 @@
 # bike-front
 
-BIKE 프론트는 **홈 추천 코스 → pre-ride 확인 → ride HUD → 기록 저장/코스 만들기**까지의 Android Native 사용자 흐름을 담당합니다.
+`bike-front`는 BIKE 프로젝트의 Android Native 클라이언트 저장소입니다.
+
+BIKE는 **자전거 여행 중 필요한 경로와 상태 정보를 한 화면 흐름으로 묶어 외부 앱 재진입을 줄이는 주행 HUD 프로젝트**이고,
+이 저장소는 그중 홈 진입, pre-ride, ride HUD, 기록 저장, 코스 생성 흐름을 담당합니다.
 
 > Organization: [BIKE-PROJECT-MINJI](https://github.com/BIKE-PROJECT-MINJI)  
 > Related repositories: [bike-back](https://github.com/BIKE-PROJECT-MINJI/bike-back)
@@ -20,6 +23,7 @@ BIKE는 자전거 여행 중 **경로와 상태 정보를 한 화면에서 확�
 - 시작 전 맥락 확인(pre-ride)
 - 주행 중 경로 / 위치 / 속도 / 날씨 / 정책 경고를 한 화면에서 확인
 - 주행 종료 후 기록 저장 및 코스 생성
+- 행동 이벤트 수집 지점과 저장 후 상태 UX 처리
 
 ## Current scope
 
@@ -37,6 +41,7 @@ BIKE는 자전거 여행 중 **경로와 상태 정보를 한 화면에서 확�
 - 공개 범위 선택 UI (`비공개 / 링크 공유 / 공개`)
 - 실제 `ride-record` 저장 API 호출
 - 실제 `course create` API 호출
+- 주행 저장 후 processing / failed / regenerate 상태 UX
 - Activity 재생성 시 저장/생성 진행 상태 보존
 
 ## Main screens
@@ -55,6 +60,11 @@ BIKE는 자전거 여행 중 **경로와 상태 정보를 한 화면에서 확�
 3. ride 화면으로 들어가 주행한다.
 4. 주행 종료 후 기록 저장과 코스 만들기 흐름으로 이동한다.
 5. 로그인 후 코스 초안을 저장한다.
+
+## Current product note
+
+- 현재 앱은 backend-first 흐름에 맞춰 서버 정책/기록/코스 생성을 중심으로 연결됩니다.
+- 프론트는 최종 경로를 임의 확정하지 않고, 서버의 저장/후처리 상태를 따라가는 방향으로 정리하고 있습니다.
 
 ## Stack
 
@@ -97,7 +107,8 @@ cmd.exe /c gradlew.bat test
 ## API base URL
 
 - debug 기본값: `http://10.0.2.2:8080`
-- release 기본값: `https://bike-back-production.up.railway.app`
+- 현재 배포 backend 기준 base URL: `http://3.35.168.38`
+- release URL은 환경에 따라 gradle property로 덮어씁니다.
 - 필요 시 gradle property로 덮어쓸 수 있습니다.
 
 예시:
@@ -124,3 +135,4 @@ cmd.exe /c gradlew.bat test
 
 - 기능이 추가되거나 제거되면 **Current scope**와 **Main screens**를 함께 갱신합니다.
 - README는 계획이 아니라 **지금 실제로 구현된 화면/흐름만** 적습니다.
+- 실제 Organization 소개는 org `.github` profile README와 함께 관리합니다.
