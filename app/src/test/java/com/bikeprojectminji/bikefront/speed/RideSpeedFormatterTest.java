@@ -1,7 +1,6 @@
 package com.bikeprojectminji.bikefront.speed;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 import android.location.Location;
 import org.junit.Test;
@@ -27,7 +26,7 @@ public class RideSpeedFormatterTest {
     @Test
     public void resolveAccuracyMessageShowsWeakGuidanceOnlyWhenAccuracyIsLow() {
         assertEquals("현재 위치 정보가 불안정합니다.", RideSpeedFormatter.resolveAccuracyMessage(true, 80f));
-        assertNull(RideSpeedFormatter.resolveAccuracyMessage(true, 25f));
-        assertNull(RideSpeedFormatter.resolveAccuracyMessage(false, 0f));
+        assertEquals("", RideSpeedFormatter.resolveAccuracyMessage(true, 25f));
+        assertEquals("", RideSpeedFormatter.resolveAccuracyMessage(false, 0f));
     }
 }
