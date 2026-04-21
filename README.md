@@ -1,8 +1,8 @@
 # bike-front
 
-`bike-front`는 BIKE 프로젝트의 Android Native 클라이언트 저장소입니다.
+`bike-front`는 GAJA 프로젝트의 Android Native 클라이언트 저장소입니다.
 
-BIKE는 **자전거 여행 중 필요한 경로와 상태 정보를 한 화면 흐름으로 묶어 외부 앱 재진입을 줄이는 주행 HUD 프로젝트**이고,
+GAJA는 **가벼운 자전거 여행을 위한 주행 HUD 프로젝트**이고,
 이 저장소는 그중 홈 진입, pre-ride, ride HUD, 기록 저장, 코스 생성 흐름을 담당합니다.
 
 > Organization: [BIKE-PROJECT-MINJI](https://github.com/BIKE-PROJECT-MINJI)  
@@ -16,7 +16,7 @@ BIKE는 **자전거 여행 중 필요한 경로와 상태 정보를 한 화면 �
 
 ## What this repository does
 
-BIKE는 자전거 여행 중 **경로와 상태 정보를 한 화면에서 확인하게 해 외부 앱 재진입을 줄이는 주행 HUD 앱**입니다.
+GAJA는 자전거 여행 중 **경로와 상태 정보를 한 화면에서 확인하게 해 외부 앱 재진입을 줄이는 주행 HUD 앱**입니다.
 
 `bike-front`는 그중 아래 경험을 책임집니다.
 - 홈에서 빠르게 코스 진입
