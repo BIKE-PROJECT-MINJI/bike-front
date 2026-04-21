@@ -1,5 +1,8 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
+import android.util.Log
+import com.bikeprojectminji.bikefront.analytics.AnalyticsTracker
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -41,6 +44,7 @@ fun RideStartScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val repository = remember(context) { CoursesRepository(context) }
+    val analyticsTracker = remember(context) { AnalyticsTracker(context) }
     val coroutineScope = rememberCoroutineScope()
     var refreshKey by remember { mutableStateOf(0) }
 
@@ -55,17 +59,33 @@ fun RideStartScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    LaunchedEffect(Unit) {
+        analyticsTracker.track("course_list_viewed", "course_list", mapOf("source" to "home"))
+    }
+
     LaunchedEffect(refreshKey) {
         if (featuredState !is SectionState.Success) featuredState = SectionState.Loading
         if (listState !is SectionState.Success) listState = SectionState.Loading
 
         launch {
             val result = runCatching { withContext(Dispatchers.IO) { repository.fetchFeaturedCourses() } }
-            featuredState = result.fold({ SectionState.Success(it) }, { SectionState.Error("추천 로드 실패") })
+            featuredState = result.fold(
+                { SectionState.Success(it) },
+                {
+                    Log.e("RideStartScreen", "featured load failed", it)
+                    SectionState.Error("추천 로드 실패")
+                },
+            )
         }
         launch {
             val result = runCatching { withContext(Dispatchers.IO) { repository.fetchAllCourses(limit = 10) } }
-            listState = result.fold({ SectionState.Success(it) }, { SectionState.Error("목록 로드 실패") })
+            listState = result.fold(
+                { SectionState.Success(it) },
+                {
+                    Log.e("RideStartScreen", "course list load failed", it)
+                    SectionState.Error("목록 로드 실패")
+                },
+            )
         }
     }
 
