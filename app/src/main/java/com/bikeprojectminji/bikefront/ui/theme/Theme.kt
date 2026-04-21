@@ -16,42 +16,46 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 
 // ============================================================================
-// GAJA "Carbon & Moss" Design System
-// Deep, Professional, and High-Contrast
+// Premium Mobility & Action Design System
+// High-contrast, sharp, Lime/Electric Mobility-inspired look
 // ============================================================================
 
 object GajaColors {
-    // Primary: Deep Forest Moss (Stable & Premium)
-    val Primary = Color(0xFF1B4332) 
+    // Primary: Electric Green
+    val Primary = Color(0xFF00D05A) 
     val OnPrimary = Color(0xFFFFFFFF)
-    val PrimaryContainer = Color(0xFFD8F3DC)
+    val PrimaryContainer = Color(0xFFE5FAE8)
     
-    // Accent: Electric Lime (Speed & Energy)
-    val Accent = Color(0xFF95D5B2)
-    val LimeAccent = Color(0xFFB7E4C7)
+    // Accent: Sleek Dark
+    val Accent = Color(0xFF111111)
+    val LimeAccent = Color(0xFFF0F0F0)
+    val BrightLime = Color(0xFFEAEAEA)
     
-    // Neutrals: Carbon Series (The "Black" base)
-    val Carbon = Color(0xFF121212)
-    val Graphite = Color(0xFF2D2D2D)
+    // Neutrals
     val White = Color(0xFFFFFFFF)
-    val Background = Color(0xFFFBFBFB)
+    val Background = Color(0xFFF7F7FD) // Pure mobility gray-white
+    val Surface = Color(0xFFFFFFFF)
     
-    // Text: Absolute Contrast
-    val TextPrimary = Color(0xFF000000) 
-    val TextSecondary = Color(0xFF2D2D2D)
-    val TextTertiary = Color(0xFF5F6661)
+    // Text: High Contrast
+    val TextPrimary = Color(0xFF111111) // Deep Black
+    val TextSecondary = Color(0xFF555555) // Neutral Gray
+    val TextTertiary = Color(0xFF888888) // Light Gray
+    
+    // UI Helpers 
+    val Carbon = Color(0xFF1A1A1A) 
+    val Graphite = Color(0xFF333333)
     
     // Semantic
-    val Success = Color(0xFF2D6A4F)
+    val Success = Color(0xFF00D05A)
     val Warning = Color(0xFFFFB703)
-    val Error = Color(0xFFD00000)
+    val Error = Color(0xFFDE3226)
 
     // Layout
-    val Border = Color(0xFFE0E0E0)
-    val Divider = Color(0xFFEEEEEE)
+    val Border = Color(0xFFEBEBEB)
+    val Divider = Color(0xFFF2F2F2)
     
-    // Brand Gradients
-    val BrandGradient = listOf(Color(0xFF000000), Color(0xFF1B4332))
+    // Brand Gradients 
+    val BrandGradient = listOf(Color(0xFF00D05A), Color(0xFF009C43))
 }
 
 private val LightColorScheme = lightColorScheme(
@@ -60,7 +64,7 @@ private val LightColorScheme = lightColorScheme(
     primaryContainer = GajaColors.PrimaryContainer,
     onPrimaryContainer = GajaColors.Primary,
     
-    secondary = GajaColors.Graphite,
+    secondary = GajaColors.Accent,
     onSecondary = GajaColors.White,
     
     background = GajaColors.Background,
@@ -76,56 +80,63 @@ private val LightColorScheme = lightColorScheme(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = GajaColors.Accent,
-    onPrimary = GajaColors.Carbon,
-    primaryContainer = GajaColors.Primary,
+    primary = GajaColors.Primary,
+    onPrimary = Color(0xFF111111),
+    primaryContainer = GajaColors.Carbon,
     
-    background = GajaColors.Carbon,
+    background = Color(0xFF111111),
     onBackground = GajaColors.White,
     
-    surface = GajaColors.Graphite,
+    surface = Color(0xFF1C1C1E),
     onSurface = GajaColors.White,
     
-    outline = GajaColors.Graphite,
+    outline = Color(0xFF333333),
 )
 
 private val GajaTypography = Typography(
     displayLarge = TextStyle(
         fontWeight = FontWeight.Black,
-        fontSize = 40.sp,
+        fontSize = 36.sp,
         letterSpacing = (-1).sp,
-        lineHeight = 46.sp,
+        lineHeight = 42.sp,
         color = GajaColors.TextPrimary
     ),
     displayMedium = TextStyle(
         fontWeight = FontWeight.ExtraBold,
-        fontSize = 32.sp,
+        fontSize = 28.sp,
         letterSpacing = (-0.5).sp,
-        lineHeight = 38.sp,
+        lineHeight = 34.sp,
         color = GajaColors.TextPrimary
     ),
     headlineLarge = TextStyle(
         fontWeight = FontWeight.Bold,
-        fontSize = 26.sp,
+        fontSize = 24.sp,
+        letterSpacing = (-0.2).sp,
         lineHeight = 32.sp,
         color = GajaColors.TextPrimary
     ),
     headlineMedium = TextStyle(
         fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
+        fontSize = 20.sp,
         lineHeight = 28.sp,
         color = GajaColors.TextPrimary
     ),
     titleLarge = TextStyle(
         fontWeight = FontWeight.Bold,
-        fontSize = 19.sp,
-        lineHeight = 25.sp,
+        fontSize = 18.sp,
+        lineHeight = 24.sp,
+        color = GajaColors.TextPrimary
+    ),
+    titleMedium = TextStyle(
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
         color = GajaColors.TextPrimary
     ),
     bodyLarge = TextStyle(
         fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
+        fontSize = 15.sp,
+        lineHeight = 22.sp,
         color = GajaColors.TextPrimary
     ),
     bodyMedium = TextStyle(
@@ -136,9 +147,15 @@ private val GajaTypography = Typography(
     ),
     labelLarge = TextStyle(
         fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,
+        fontSize = 13.sp,
         letterSpacing = 0.5.sp,
         color = GajaColors.TextPrimary
+    ),
+    labelSmall = TextStyle(
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 11.sp,
+        letterSpacing = 0.5.sp,
+        color = GajaColors.TextTertiary
     )
 )
 
@@ -155,7 +172,8 @@ object GajaSpacing {
     val ItemSpacing = 16.dp
     val Large = 24.dp
     val Medium = 16.dp
-    val Small = 8.dp
+    val Small = 12.dp
+    val Tiny = 8.dp
 }
 
 val LocalGajaSpacing = staticCompositionLocalOf { GajaSpacing }

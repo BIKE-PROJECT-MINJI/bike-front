@@ -1,91 +1,573 @@
 package com.bikeprojectminji.bikefront.free
 
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.location.LocationManager
 import android.os.Bundle
-import android.widget.Toast
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.bikeprojectminji.bikefront.ui.screen.GajaBrandTopBar
+import androidx.compose.ui.unit.sp
+import com.bikeprojectminji.bikefront.BuildConfig
+import com.bikeprojectminji.bikefront.R
+import com.bikeprojectminji.bikefront.auth.AuthProfileActivity
+import com.bikeprojectminji.bikefront.auth.AuthSessionStore
+import com.bikeprojectminji.bikefront.ride.HttpRideRecordGateway
+import com.bikeprojectminji.bikefront.ride.RideRecordGateway
+import com.bikeprojectminji.bikefront.ridemap.CourseRoutePointsGateway
+import com.bikeprojectminji.bikefront.ridepolicy.HttpRidePolicyEvaluationGateway
+import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyUiMapper
+import com.bikeprojectminji.bikefront.speed.RideSpeedFormatter
+import com.bikeprojectminji.bikefront.speed.RideSpeedUiState
+import com.bikeprojectminji.bikefront.ui.screen.GajaMapPreview
 import com.bikeprojectminji.bikefront.ui.screen.GajaPrimaryButton
-import com.bikeprojectminji.bikefront.ui.screen.SectionHeader
+import com.bikeprojectminji.bikefront.ui.screen.MapDisplayMode
+import com.bikeprojectminji.bikefront.ui.screen.MapViewportActions
+import com.bikeprojectminji.bikefront.ui.screen.SecondaryActionButton
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import com.bikeprojectminji.bikefront.ui.theme.GajaTheme
-import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
+import com.bikeprojectminji.bikefront.weather.HttpCurrentWeatherGateway
 
 class FreeRideActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val courseId = intent.getLongExtra("extra_course_id", -1L).takeIf { it > 0L }
         setContent {
             GajaTheme {
-                FreeRideMainScreen(onFinish = { finish() })
+                FreeRideHudScreen(courseId = courseId, onFinish = { finish() })
             }
         }
     }
 }
 
 @Composable
-fun FreeRideMainScreen(onFinish: () -> Unit) {
-    Scaffold(
-        topBar = { GajaBrandTopBar(title = "Free Ride Session") },
-        containerColor = GajaColors.Background
-    ) { innerPadding ->
-        Column(
+fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
+    val context = LocalContext.current
+    val authSessionStore = remember { AuthSessionStore(context) }
+    val rideRecordGateway = remember { HttpRideRecordGateway() }
+    val weatherGateway = remember { HttpCurrentWeatherGateway() }
+    val ridePolicyGateway = remember { HttpRidePolicyEvaluationGateway() }
+    val ridePolicyUiMapper = remember { RidePolicyUiMapper() }
+    val speedFormatter = remember { RideSpeedFormatter() }
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+    val locationManager = remember(context) { context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager }
+
+    var locationGranted by remember { mutableStateOf(false) }
+    var routePoints by remember { mutableStateOf<List<CourseRoutePointsGateway.RoutePoint>>(emptyList()) }
+    var viewportActions by remember { mutableStateOf<MapViewportActions?>(null) }
+    var inFlightSave by remember { mutableStateOf(false) }
+    var pendingSaveAfterAuth by remember { mutableStateOf(false) }
+    var processingRideRecordId by remember { mutableStateOf<Long?>(null) }
+    var processingRideRecordMessage by remember { mutableStateOf(context.getString(R.string.ride_finish_processing_message)) }
+    var processingRideRecordFailed by remember { mutableStateOf(false) }
+    val startedAtMillis = remember { System.currentTimeMillis() }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        locationGranted = granted
+    }
+    val authLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK && authSessionStore.isSignedIn()) {
+            pendingSaveAfterAuth = true
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!locationGranted) permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+    val trackingState = rememberFreeRideTrackingState(
+        courseId = courseId,
+        locationGranted = locationGranted,
+        locationManager = locationManager,
+        weatherGateway = weatherGateway,
+        ridePolicyGateway = ridePolicyGateway,
+        ridePolicyUiMapper = ridePolicyUiMapper,
+    )
+
+    val speedState: RideSpeedUiState = speedFormatter.format(trackingState.currentLocation, trackingState.previousLocation)
+    val locationState = remember(locationGranted, trackingState.currentLocation, speedState.message) {
+        RideLocationHudStateResolver.resolve(
+            locationGranted,
+            trackingState.currentLocation != null,
+            trackingState.currentLocation?.hasAccuracy() == true && trackingState.currentLocation.accuracy > 50f,
+            "위치 권한이 필요합니다.",
+            "현재 위치를 확인하는 중입니다.",
+            speedState.message,
+        )
+    }
+    val distanceMeters = remember(trackingState.trackedPoints.size) {
+        if (trackingState.trackedPoints.size < 2) 0 else trackingState.trackedPoints.zipWithNext().sumOf { (a, b) ->
+            val results = FloatArray(1)
+            android.location.Location.distanceBetween(a.latitude, a.longitude, b.latitude, b.longitude, results)
+            results[0].toInt()
+        }
+    }
+    val statusMessage = remember(trackingState.policyState?.message, speedState.message, trackingState.weatherState.temperatureMessage) {
+        RideStatusMessageResolver.resolve(
+            "주행 상태를 확인하는 중입니다.",
+            sanitizeHudMessage(trackingState.policyState?.message),
+            "현재 위치를 기다리는 중입니다.",
+            sanitizeHudMessage(speedState.message),
+            "현재 위치를 확인하는 중입니다.",
+            sanitizeHudMessage(trackingState.weatherState.temperatureMessage),
+            "날씨를 확인하는 중입니다.",
+        )
+    }
+
+    fun openCourseEditor(preparation: FreeRideSavePreparation.Ready, rideRecordId: Long) {
+        processingRideRecordId = null
+        processingRideRecordFailed = false
+        processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+        context.startActivity(
+            FreeRideSaveCoordinator.createEditorIntent(
+                context = context,
+                rideRecordId = rideRecordId,
+                distanceKm = preparation.distanceKm,
+                durationMinutes = preparation.durationMinutes,
+            )
+        )
+    }
+
+    fun pollRideRecordFinalization(preparation: FreeRideSavePreparation.Ready, rideRecordId: Long) {
+        rideRecordGateway.getRideRecordStatus(preparation.accessToken, rideRecordId, object : RideRecordGateway.StatusCallback {
+            override fun onSuccess(result: RideRecordGateway.RideRecordFinalizationStatusResult) {
+                when (result.status) {
+                    "READY" -> openCourseEditor(preparation, result.rideRecordId)
+                    "FAILED" -> {
+                        processingRideRecordId = result.rideRecordId
+                        processingRideRecordFailed = true
+                        processingRideRecordMessage = result.errorMessage ?: context.getString(R.string.ride_finish_processing_failed_message)
+                    }
+                    else -> {
+                        processingRideRecordId = result.rideRecordId
+                        processingRideRecordFailed = false
+                        processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+                        mainHandler.postDelayed({ pollRideRecordFinalization(preparation, rideRecordId) }, 2000L)
+                    }
+                }
+            }
+
+            override fun onFailure(message: String) {
+                processingRideRecordId = rideRecordId
+                processingRideRecordFailed = true
+                processingRideRecordMessage = message
+            }
+        })
+    }
+
+    fun regenerateRideRecord() {
+        val rideRecordId = processingRideRecordId ?: return
+        val endedAtMillis = System.currentTimeMillis()
+        val preparation = FreeRideSaveCoordinator.prepare(
+            accessToken = authSessionStore.accessToken,
+            trackedPoints = trackingState.trackedPoints,
+            routePoints = routePoints,
+            distanceMeters = distanceMeters,
+            startedAtMillis = startedAtMillis,
+            endedAtMillis = endedAtMillis,
+        )
+        if (preparation !is FreeRideSavePreparation.Ready) {
+            return
+        }
+        processingRideRecordFailed = false
+        processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+        rideRecordGateway.regenerateRideRecord(preparation.accessToken, rideRecordId, object : RideRecordGateway.StatusCallback {
+            override fun onSuccess(result: RideRecordGateway.RideRecordFinalizationStatusResult) {
+                processingRideRecordId = result.rideRecordId
+                pollRideRecordFinalization(preparation, result.rideRecordId)
+            }
+
+            override fun onFailure(message: String) {
+                processingRideRecordFailed = true
+                processingRideRecordMessage = message
+            }
+        })
+    }
+
+    fun saveAndOpenEditor() {
+        val endedAtMillis = System.currentTimeMillis()
+        when (val preparation = FreeRideSaveCoordinator.prepare(
+            accessToken = authSessionStore.accessToken,
+            trackedPoints = trackingState.trackedPoints,
+            routePoints = routePoints,
+            distanceMeters = distanceMeters,
+            startedAtMillis = startedAtMillis,
+            endedAtMillis = endedAtMillis,
+        )) {
+            is FreeRideSavePreparation.Blocked -> {
+                if (preparation.requiresAuth) {
+                    authLauncher.launch(AuthProfileActivity.createIntent(context, returnAfterSave = true))
+                }
+            }
+            is FreeRideSavePreparation.Ready -> {
+                inFlightSave = true
+                rideRecordGateway.saveRideRecord(preparation.accessToken, preparation.draft, object : RideRecordGateway.Callback {
+                    override fun onSuccess(result: RideRecordGateway.RideRecordSaveResult) {
+                        inFlightSave = false
+                        processingRideRecordId = result.rideRecordId
+                        processingRideRecordFailed = false
+                        processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+                        if (result.finalizationStatus == "READY") {
+                            openCourseEditor(preparation, result.rideRecordId)
+                        } else {
+                            pollRideRecordFinalization(preparation, result.rideRecordId)
+                        }
+                    }
+
+                    override fun onFailure(message: String) {
+                        inFlightSave = false
+                        processingRideRecordFailed = true
+                        processingRideRecordMessage = message
+                    }
+                })
+            }
+        }
+    }
+
+    LaunchedEffect(pendingSaveAfterAuth, inFlightSave) {
+        if (pendingSaveAfterAuth && !inFlightSave) {
+            pendingSaveAfterAuth = false
+            saveAndOpenEditor()
+        }
+    }
+
+    val distanceText = if (distanceMeters > 0) String.format("%.1fkm", distanceMeters / 1000.0) else "--"
+    val windValue = trackingState.weatherState.windText.ifBlank { "--" }
+    val tempValue = trackingState.weatherState.temperatureText.ifBlank { "--" }
+    val policyLabel = trackingState.policyState?.stateLabel ?: "확인 중"
+    val bannerMessage = sanitizeHudMessage(trackingState.policyState?.takeIf { it.isShowBanner && it.bannerMessage.isNotBlank() }?.bannerMessage)
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        GajaMapPreview(
+            modifier = Modifier.fillMaxSize(),
+            courseId = courseId,
+            mode = MapDisplayMode.RIDE,
+            locationPermissionGranted = locationGranted,
+            onRoutePointsLoaded = { routePoints = it },
+            onViewportActionsReady = { viewportActions = it },
+        )
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = GajaSpacing.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color.Black.copy(alpha = 0.28f),
+                        0.18f to Color.Transparent,
+                        0.76f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = 0.34f),
+                    )
+                )
+        )
+
+        RideHudTopBar(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 12.dp, start = 16.dp, end = 16.dp),
+            locationText = locationState.value,
+            policyText = policyLabel,
+            bannerMessage = bannerMessage,
+            tempValue = tempValue,
+            windValue = windValue,
+            onClose = onFinish,
+            onRecenter = { viewportActions?.recenter?.invoke() },
+            onZoomIn = { viewportActions?.zoomIn?.invoke() },
+            onZoomOut = { viewportActions?.zoomOut?.invoke() },
+        )
+
+        PrimaryRideMetric(
+            value = speedState.speedText.removeSuffix("km/h"),
+            unit = "km/h",
+            distanceText = "",
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 88.dp),
+        )
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 20.dp)
         ) {
-            Spacer(Modifier.height(GajaSpacing.Small))
+            RideControlDock(
+                statusText = statusMessage,
+                inFlightSave = inFlightSave,
+                onSave = { if (!inFlightSave) saveAndOpenEditor() },
+                onStop = onFinish,
+            )
+        }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = CardDefaults.cardColors(containerColor = GajaColors.TextPrimary)
-            ) {
-                Column(modifier = Modifier.padding(GajaSpacing.Large)) {
-                    Text("주행 기록 중", style = MaterialTheme.typography.labelSmall, color = GajaColors.Accent)
-                    Text("00:42:15", style = MaterialTheme.typography.displayLarge, color = GajaColors.White)
-                }
-            }
-
-            SectionHeader(title = "현재 지표", subtitle = "실시간 주행 데이터")
-
-            Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
-                MetricItem("속도", "24.5 km/h", Modifier.weight(1f))
-                MetricItem("거리", "12.4 km", Modifier.weight(1f))
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            GajaPrimaryButton(
-                text = "주행 종료 및 저장",
-                onClick = { 
-                    Toast.makeText(onFinish as? android.content.Context ?: return@GajaPrimaryButton, "주행이 기록되었습니다.", Toast.LENGTH_SHORT).show()
-                    onFinish()
+        if (processingRideRecordId != null) {
+            AlertDialog(
+                onDismissRequest = {},
+                title = {
+                    Text(if (processingRideRecordFailed) "코스 생성 실패" else "코스 생성 중")
+                },
+                text = {
+                    Text(processingRideRecordMessage)
+                },
+                confirmButton = {
+                    if (processingRideRecordFailed) {
+                        Button(onClick = { regenerateRideRecord() }) {
+                            Text(context.getString(R.string.ride_finish_processing_retry_button))
+                        }
+                    }
+                },
+                dismissButton = {
+                    if (!processingRideRecordFailed) {
+                        TextButton(onClick = {}) {
+                            Text(context.getString(R.string.ride_finish_processing_wait_button))
+                        }
+                    }
                 }
             )
-            Spacer(Modifier.height(GajaSpacing.Large))
         }
     }
 }
 
 @Composable
-fun MetricItem(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = GajaColors.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, GajaColors.Border)
-    ) {
-        Column(modifier = Modifier.padding(GajaSpacing.Medium)) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary)
-            Text(value, style = MaterialTheme.typography.titleLarge, color = GajaColors.TextPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.Black)
+fun RideHudTopBar(
+    modifier: Modifier = Modifier,
+    locationText: String,
+    policyText: String,
+    bannerMessage: String?,
+    tempValue: String,
+    windValue: String,
+    onClose: () -> Unit,
+    onRecenter: () -> Unit,
+    onZoomIn: () -> Unit,
+    onZoomOut: () -> Unit,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RideStatusBadge(text = "LIVE", containerColor = GajaColors.Primary)
+                    RideStatusBadge(text = locationText, containerColor = Color.Black.copy(alpha = 0.30f))
+                    RideStatusBadge(text = policyText, containerColor = Color.Black.copy(alpha = 0.30f))
+                }
+                SecondaryConditionsRow(tempValue = tempValue, windValue = windValue)
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                MapControlButton(icon = Icons.Default.MyLocation, onClick = onRecenter)
+                MapControlButton(icon = Icons.Default.Add, onClick = onZoomIn)
+                MapControlButton(icon = Icons.Default.Remove, onClick = onZoomOut)
+                HudControlButton(
+                    icon = Icons.Default.Close,
+                    containerColor = Color.Black.copy(alpha = 0.30f),
+                    size = 40.dp,
+                    onClick = onClose,
+                )
+            }
+        }
+        if (!bannerMessage.isNullOrBlank()) {
+            Surface(
+                color = GajaColors.Error.copy(alpha = 0.82f),
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.wrapContentHeight(),
+            ) {
+                Text(
+                    text = bannerMessage,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
+}
+
+@Composable
+fun RideStatusBadge(text: String, containerColor: Color) {
+    Surface(
+        color = containerColor,
+        shape = CircleShape,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+fun PrimaryRideMetric(
+    value: String,
+    unit: String,
+    distanceText: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = value,
+            style = TextStyle(fontSize = 64.sp, fontWeight = FontWeight.Black, letterSpacing = (-3).sp, color = Color.White),
+        )
+        Text(
+            text = unit,
+            style = MaterialTheme.typography.titleMedium,
+            color = GajaColors.White.copy(alpha = 0.86f),
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.5.sp,
+        )
+        if (distanceText.isNotBlank()) {
+            RideStatusBadge(text = distanceText, containerColor = Color.Black.copy(alpha = 0.26f))
+        }
+    }
+}
+
+@Composable
+fun SecondaryConditionsRow(
+    tempValue: String,
+    windValue: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            color = Color.Black.copy(alpha = 0.24f),
+            shape = CircleShape,
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+        ) {
+            Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                CompactMetricChip(label = "기온", value = tempValue)
+                CompactMetricChip(label = "바람", value = windValue)
+            }
+        }
+    }
+}
+
+@Composable
+fun RideControlDock(
+    statusText: String,
+    inFlightSave: Boolean,
+    onSave: () -> Unit,
+    onStop: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (statusText.isNotBlank()) {
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.78f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            HudControlButton(
+                icon = Icons.Default.Pause,
+                containerColor = Color.Black.copy(alpha = 0.28f),
+                onClick = {},
+            )
+            GajaPrimaryButton(
+                text = if (inFlightSave) "저장 중..." else "기록 저장",
+                onClick = onSave,
+                enabled = !inFlightSave,
+                modifier = Modifier.widthIn(min = 180.dp),
+            )
+            HudControlButton(
+                icon = Icons.Default.Close,
+                containerColor = GajaColors.Error.copy(alpha = 0.82f),
+                onClick = onStop,
+            )
+        }
+    }
+}
+
+@Composable
+fun CompactMetricChip(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.52f),
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Black,
+        )
+    }
+}
+
+@Composable
+fun MapControlButton(icon: ImageVector, onClick: () -> Unit) {
+    HudControlButton(
+        icon = icon,
+        containerColor = Color.Black.copy(alpha = 0.28f),
+        size = 40.dp,
+        onClick = onClick,
+    )
+}
+
+@Composable
+fun HudControlButton(
+    icon: ImageVector,
+    containerColor: Color,
+    size: androidx.compose.ui.unit.Dp = 54.dp,
+    onClick: () -> Unit,
+) {
+    FilledIconButton(
+        onClick = onClick,
+        modifier = Modifier.size(size),
+        colors = IconButtonDefaults.filledIconButtonColors(containerColor = containerColor, contentColor = Color.White),
+        shape = CircleShape,
+    ) {
+        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(size * 0.46f))
+    }
+}
+
+private fun sanitizeHudMessage(message: String?): String {
+    if (message.isNullOrBlank()) return ""
+    if (!BuildConfig.DEBUG && (message.contains("127.0.0.1") || message.contains("localhost") || message.contains(":8080"))) {
+        return "연결 상태를 다시 확인해 주세요."
+    }
+    return message
 }

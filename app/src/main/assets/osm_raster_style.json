@@ -1,23 +1,69 @@
 {
   "version": 8,
-  "name": "OSM Raster",
+  "name": "OpenFreeMap Liberty",
+  "glyphs": "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+  "sprite": "https://tiles.openfreemap.org/sprites/liberty",
   "sources": {
-    "osm-raster": {
-      "type": "raster",
-      "tiles": [
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-      ],
-      "tileSize": 256,
-      "attribution": "© OpenStreetMap contributors"
+    "openfreemap": {
+      "type": "vector",
+      "url": "https://tiles.openfreemap.org/planet"
     }
   },
   "layers": [
     {
-      "id": "osm-raster-layer",
-      "type": "raster",
-      "source": "osm-raster",
-      "minzoom": 0,
-      "maxzoom": 19
+      "id": "background",
+      "type": "background",
+      "paint": { "background-color": "#eef3ea" }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "openfreemap",
+      "source-layer": "water",
+      "paint": { "fill-color": "#b9d8ff" }
+    },
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "openfreemap",
+      "source-layer": "landcover",
+      "paint": { "fill-color": "#dfead7" }
+    },
+    {
+      "id": "roads",
+      "type": "line",
+      "source": "openfreemap",
+      "source-layer": "transportation",
+      "paint": {
+        "line-color": "#ffffff",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.7, 14, 2.2]
+      }
+    },
+    {
+      "id": "road-outline",
+      "type": "line",
+      "source": "openfreemap",
+      "source-layer": "transportation",
+      "paint": {
+        "line-color": "#c9d6c2",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1.0, 14, 2.8]
+      }
+    },
+    {
+      "id": "place-labels",
+      "type": "symbol",
+      "source": "openfreemap",
+      "source-layer": "place",
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:ko"], ["get", "name"]],
+        "text-font": ["Noto Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 4, 11, 10, 14]
+      },
+      "paint": {
+        "text-color": "#445566",
+        "text-halo-color": "#f4f7fb",
+        "text-halo-width": 1.2
+      }
     }
   ]
 }

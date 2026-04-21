@@ -4,11 +4,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,24 +25,19 @@ import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import com.bikeprojectminji.bikefront.ui.theme.GajaIconTokens
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 
-// ============================================================================
-// GAJA MODERN FOREST COMPONENT LIBRARY
-// Sophisticated Green, High Readability
-// ============================================================================
-
-/**
- * Modern, clean TopBar.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GajaBrandTopBar(
     title: String,
+    onProfileClick: () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {
-        IconButton(onClick = { }) {
-            Icon(Icons.Default.Notifications, contentDescription = null, tint = GajaColors.TextPrimary)
-        }
-        IconButton(onClick = { }) {
-            Icon(Icons.Default.Settings, contentDescription = null, tint = GajaColors.TextPrimary)
+        IconButton(onClick = onProfileClick) {
+            Icon(
+                imageVector = Icons.Default.AccountCircle, 
+                contentDescription = "Profile", 
+                tint = GajaColors.TextPrimary, 
+                modifier = Modifier.size(32.dp)
+            )
         }
     }
 ) {
@@ -50,8 +45,8 @@ fun GajaBrandTopBar(
         title = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black,
                 color = GajaColors.TextPrimary
             )
         },
@@ -63,52 +58,40 @@ fun GajaBrandTopBar(
     )
 }
 
-/**
- * Primary action button - Forest Green.
- */
 @Composable
 fun GajaPrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    containerColor: Color = GajaColors.Primary
 ) {
     Button(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
-        shape = MaterialTheme.shapes.medium,
+        shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = GajaColors.Primary,
+            containerColor = containerColor,
             contentColor = GajaColors.White,
-            disabledContainerColor = GajaColors.Border,
+            disabledContainerColor = GajaColors.Divider,
             disabledContentColor = GajaColors.TextTertiary
         ),
         enabled = enabled,
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold
-            )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+            Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             if (icon != null) {
                 Spacer(Modifier.width(8.dp))
-                Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp))
             }
         }
     }
 }
 
-/**
- * Secondary button - Outlined with Forest Green.
- */
 @Composable
 fun SecondaryActionButton(
     text: String,
@@ -121,24 +104,15 @@ fun SecondaryActionButton(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
-        shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.5.dp, GajaColors.Primary),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = GajaColors.Primary
-        ),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, GajaColors.Border),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = GajaColors.TextPrimary),
         enabled = enabled
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold
-        )
+        Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     }
 }
 
-/**
- * Data-rich Section Header.
- */
 @Composable
 fun SectionHeader(
     title: String,
@@ -146,38 +120,22 @@ fun SectionHeader(
     modifier: Modifier = Modifier,
     action: @Composable (() -> Unit)? = null
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = GajaSpacing.Small)
-    ) {
+    Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium,
-                color = GajaColors.TextPrimary,
-                fontWeight = FontWeight.Bold
-            )
+            Text(title, style = MaterialTheme.typography.titleLarge, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
             action?.invoke()
         }
         if (subtitle != null) {
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = GajaColors.TextSecondary,
-                modifier = Modifier.padding(top = 2.dp)
-            )
+            Spacer(Modifier.height(4.dp))
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = GajaColors.TextSecondary)
         }
     }
 }
 
-/**
- * Hero Card with Fresh Forest Gradient.
- */
 @Composable
 fun HeroCard(
     title: String,
@@ -186,121 +144,103 @@ fun HeroCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: String? = null,
-    gradientColors: List<Color> = GajaColors.BrandGradient
+    gradientColors: List<Color> = listOf(GajaColors.Carbon, GajaColors.Accent)
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = GajaColors.Primary),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.horizontalGradient(gradientColors))
-                .padding(GajaSpacing.Large)
+                .background(Brush.linearGradient(gradientColors))
+                .padding(24.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)) {
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 if (icon != null) {
                     Surface(
-                        color = GajaColors.LimeAccent,
-                        shape = RoundedCornerShape(4.dp)
+                        color = GajaColors.White.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
-                            icon.uppercase(),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            text = icon.uppercase(),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelSmall,
-                            color = GajaColors.TextPrimary
+                            fontWeight = FontWeight.Bold,
+                            color = GajaColors.White
                         )
                     }
                 }
                 
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = GajaColors.White,
-                        fontWeight = FontWeight.Black
-                    )
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = GajaColors.White.copy(alpha = 0.9f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                Column {
+                    Text(title, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(6.dp))
+                    Text(description, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f))
                 }
 
                 Button(
                     onClick = onClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = GajaColors.White),
-                    shape = MaterialTheme.shapes.medium,
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = GajaColors.Primary),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) {
-                    Text(buttonText, color = GajaColors.Primary, fontWeight = FontWeight.Bold)
+                    Text(buttonText, color = GajaColors.White, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(8.dp))
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = GajaColors.Primary)
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward, 
+                        contentDescription = null, 
+                        modifier = Modifier.size(18.dp), 
+                        tint = GajaColors.White
+                    )
                 }
             }
         }
     }
 }
 
-/**
- * Compact Course Card for lists.
- */
 @Composable
 fun CourseCard(
     course: com.bikeprojectminji.bikefront.ui.screen.CourseCardUiModel,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = GajaColors.White),
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = GajaColors.White,
         border = BorderStroke(1.dp, GajaColors.Border)
     ) {
         Row(
-            modifier = Modifier
-                .padding(GajaSpacing.Medium)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(GajaColors.PrimaryContainer),
+                modifier = Modifier.size(60.dp).clip(RoundedCornerShape(12.dp)).background(GajaColors.Background),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(GajaIconTokens.Course, contentDescription = null, tint = GajaColors.Primary)
+                Icon(
+                    imageVector = GajaIconTokens.Course, 
+                    contentDescription = null, 
+                    tint = GajaColors.TextPrimary, 
+                    modifier = Modifier.size(28.dp)
+                )
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = course.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = GajaColors.TextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(top = 4.dp)
-                ) {
+                Text(course.title, style = MaterialTheme.typography.titleMedium, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     MetricLabel(GajaIconTokens.Distance, "%.1fkm".format(course.distanceKm))
                     MetricLabel(GajaIconTokens.Duration, "${course.estimatedDurationMin}m")
                 }
             }
             
             Icon(
-                Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = GajaColors.TextTertiary,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward, 
+                contentDescription = null, 
+                tint = GajaColors.TextTertiary, 
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -309,86 +249,63 @@ fun CourseCard(
 
 @Composable
 private fun MetricLabel(icon: ImageVector, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            icon,
-            contentDescription = null,
-            modifier = Modifier.size(14.dp),
-            tint = GajaColors.TextSecondary
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = GajaColors.TextSecondary
-        )
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = GajaColors.TextSecondary)
+        Text(text, style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
-fun MetricChip(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
+fun MetricChip(label: String, value: String, modifier: Modifier = Modifier) {
+    Surface(
         modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = GajaColors.PrimaryContainer),
+        shape = RoundedCornerShape(12.dp),
+        color = GajaColors.Background,
         border = BorderStroke(1.dp, GajaColors.Border)
     ) {
-        Column(
-            modifier = Modifier.padding(GajaSpacing.Medium),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(
-                text = label.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = GajaColors.TextSecondary
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge,
-                color = GajaColors.TextPrimary,
-                fontWeight = FontWeight.Black
-            )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(4.dp))
+            Text(value, style = MaterialTheme.typography.titleLarge, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
 fun BikeSurfaceCard(content: @Composable () -> Unit) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = GajaColors.PrimaryContainer),
+        shape = RoundedCornerShape(16.dp),
+        color = GajaColors.Surface,
+        border = BorderStroke(1.dp, GajaColors.Border),
         content = { content() }
     )
 }
 
 @Composable
 fun LoadingStateView(message: String) {
-    Box(Modifier.fillMaxWidth().padding(GajaSpacing.Large), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(color = GajaColors.Primary)
-            Spacer(Modifier.height(GajaSpacing.Medium))
-            Text(message, style = MaterialTheme.typography.bodyMedium, color = GajaColors.TextSecondary)
+            CircularProgressIndicator(color = GajaColors.Primary, strokeWidth = 5.dp)
+            Spacer(Modifier.height(20.dp))
+            Text(message, style = MaterialTheme.typography.bodyLarge, color = GajaColors.TextSecondary, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
 fun ErrorStateView(title: String, message: String, onRetry: () -> Unit) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = GajaColors.Error.copy(alpha = 0.1f)),
-        border = BorderStroke(1.dp, GajaColors.Error)
+        shape = RoundedCornerShape(24.dp),
+        color = GajaColors.Error.copy(alpha = 0.05f),
+        border = BorderStroke(1.dp, GajaColors.Error.copy(alpha = 0.2f))
     ) {
-        Column(Modifier.padding(GajaSpacing.Medium), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = GajaColors.Error)
-            Text(message, style = MaterialTheme.typography.bodySmall, color = GajaColors.TextPrimary)
-            TextButton(onClick = onRetry) {
-                Text("다시 시도", color = GajaColors.Error, fontWeight = FontWeight.Bold)
+        Column(Modifier.padding(28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleLarge, color = GajaColors.Error, fontWeight = FontWeight.Black)
+            Text(message, style = MaterialTheme.typography.bodyMedium, color = GajaColors.TextPrimary)
+            TextButton(onClick = onRetry, contentPadding = PaddingValues(0.dp)) {
+                Text("RETRY", color = GajaColors.Error, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
             }
         }
     }
@@ -397,12 +314,12 @@ fun ErrorStateView(title: String, message: String, onRetry: () -> Unit) {
 @Composable
 fun EmptyStateView(title: String, message: String) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(GajaSpacing.Large),
+        modifier = Modifier.fillMaxWidth().padding(48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Icon(GajaIconTokens.Course, contentDescription = null, modifier = Modifier.size(48.dp), tint = GajaColors.TextTertiary)
-        Text(title, style = MaterialTheme.typography.titleMedium, color = GajaColors.TextPrimary)
-        Text(message, style = MaterialTheme.typography.bodyMedium, color = GajaColors.TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Icon(imageVector = GajaIconTokens.Course, contentDescription = null, modifier = Modifier.size(72.dp), tint = GajaColors.Border)
+        Text(title, style = MaterialTheme.typography.headlineSmall, color = GajaColors.TextPrimary, fontWeight = FontWeight.Black)
+        Text(message, style = MaterialTheme.typography.bodyLarge, color = GajaColors.TextSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }

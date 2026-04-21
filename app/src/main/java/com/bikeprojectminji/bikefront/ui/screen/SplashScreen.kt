@@ -40,7 +40,7 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(GajaColors.Primary, GajaColors.TextPrimary)
+                    colors = GajaColors.BrandGradient
                 )
             ),
         contentAlignment = Alignment.Center
@@ -48,14 +48,14 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.graphicsLayer(alpha = alphaAnim.value)
+            modifier = Modifier.graphicsLayer { alpha = alphaAnim.value }
         ) {
             // GAJA Brand Icon (Bike Pictogram)
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
                 contentDescription = "GAJA Logo",
                 modifier = Modifier.size(120.dp),
-                tint = GajaColors.LimeAccent
+                tint = GajaColors.Accent
             )
             
             Spacer(modifier = Modifier.height(24.dp))

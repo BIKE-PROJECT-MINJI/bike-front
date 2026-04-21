@@ -2,7 +2,7 @@ package com.bikeprojectminji.bikefront.ui
 
 import android.content.Intent
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,7 +19,6 @@ fun BikeFrontApp() {
 
     GajaTheme {
         NavHost(navController = navController, startDestination = "splash") {
-            // New Splash Screen Entry
             composable("splash") {
                 SplashScreen(onAnimationFinished = {
                     navController.navigate("ride_start") {
@@ -34,7 +33,8 @@ fun BikeFrontApp() {
                     onStartFreeRide = { navController.navigate("free_ride_pre") },
                     onOpenCourse = { course ->
                         navController.navigate("course_pre/${course.id}")
-                    }
+                    },
+                    onOpenMyInfo = { navController.navigate("my_info") }
                 )
             }
             
@@ -63,11 +63,12 @@ fun BikeFrontApp() {
                     onBack = { navController.popBackStack() },
                     onStartRide = {
                         val intent = Intent(context, FreeRideActivity::class.java)
+                        intent.putExtra("extra_course_id", courseIdLong)
                         context.startActivity(intent)
                     }
                 )
             }
-
+            
             composable("my_info") {
                 MyInfoScreen(
                     innerPadding = PaddingValues(),

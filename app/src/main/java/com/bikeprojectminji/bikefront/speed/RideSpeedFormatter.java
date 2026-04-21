@@ -43,7 +43,7 @@ public class RideSpeedFormatter {
         if (hasAccuracy && accuracyMeters > 50f) {
             return "현재 위치 정보가 불안정합니다.";
         }
-        return null;
+        return "";
     }
 
     static int normalizeSpeedKmh(float speedKmh) {

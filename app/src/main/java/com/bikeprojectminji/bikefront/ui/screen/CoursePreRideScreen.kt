@@ -1,16 +1,24 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 import kotlinx.coroutines.Dispatchers
@@ -34,76 +42,58 @@ fun CoursePreRideScreen(
     val loading = detailResult == null
     val error = detailResult?.exceptionOrNull() != null
 
-    Scaffold(
-        topBar = { GajaBrandTopBar(title = "Course Detail") },
-        containerColor = GajaColors.Background
-    ) { scaffoldPadding ->
+    Box(modifier = Modifier.fillMaxSize().background(GajaColors.Background)) {
+        // Map Placeholder (Full Screen Background for Premium Mobility Look)
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFE5E5EA))) {
+            Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.align(Alignment.Center).size(64.dp), tint = Color.LightGray)
+        }
+
+        // Overlay Content (Bottom Sheet Style)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(scaffoldPadding)
-                .verticalScroll(rememberScrollState())
                 .padding(horizontal = GajaSpacing.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Spacer(Modifier.height(GajaSpacing.Small))
+            // Top Bar
+            GajaBrandTopBar(title = "경로 미리보기", onProfileClick = {})
 
-            // Course Hero Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(containerColor = GajaColors.TextPrimary)
-            ) {
-                Column(
-                    modifier = Modifier.padding(GajaSpacing.Large),
-                    verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)
+            // Focal Course Info
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.padding(bottom = 32.dp)) {
+                Surface(
+                    color = GajaColors.Surface,
+                    shape = RoundedCornerShape(20.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, GajaColors.Border),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Surface(
-                        color = GajaColors.Accent,
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            (if (resolvedCourse.isRecorded) "Recorded" else "Curated").uppercase(),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = GajaColors.TextPrimary
-                        )
+                    Column(modifier = Modifier.padding(24.dp)) {
+                        Surface(color = GajaColors.PrimaryContainer, shape = RoundedCornerShape(4.dp)) {
+                            Text("CURATED COURSE", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color=GajaColors.Primary, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Text(resolvedCourse.title, style = MaterialTheme.typography.headlineLarge, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
+                        
+                        Spacer(Modifier.height(24.dp))
+                        
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            MetricChip(label = "Distance", value = formatDistance(resolvedCourse.distanceKm), modifier = Modifier.weight(1f))
+                            MetricChip(label = "Estimated", value = "${resolvedCourse.estimatedDurationMin}m", modifier = Modifier.weight(1f))
+                        }
                     }
-                    Text(
-                        text = resolvedCourse.title,
-                        style = MaterialTheme.typography.displayMedium,
-                        color = Color.White
-                    )
                 }
-            }
 
-            SectionHeader(title = "주행 데이터", subtitle = "이 코스의 예상 주행 지표입니다")
-            
-            Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
-                MetricChip(label = "총 거리", value = formatDistance(resolvedCourse.distanceKm), modifier = Modifier.weight(1f))
-                MetricChip(label = "예상 시간", value = "${resolvedCourse.estimatedDurationMin}분", modifier = Modifier.weight(1f))
-            }
-
-            if (loading) {
-                LoadingStateView("코스 상세 분석 중...")
-            } else if (error) {
-                ErrorStateView("로드 실패", "코스 데이터를 가져오지 못했습니다.") { /* Retry logic */ }
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
+                // Bottom Actions
+                if (loading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = GajaColors.Primary)
+                
                 GajaPrimaryButton(
-                    text = "라이딩 시작",
-                    enabled = !loading && !error,
-                    onClick = onStartRide
+                    text = "주행 시작하기",
+                    onClick = onStartRide,
+                    icon = Icons.AutoMirrored.Filled.ArrowForward,
+                    enabled = !loading && !error
                 )
-                SecondaryActionButton(
-                    text = "돌아가기",
-                    onClick = onBack
-                )
+                SecondaryActionButton(text = "뒤로가기", onClick = onBack)
             }
-            Spacer(Modifier.height(40.dp))
         }
     }
 }

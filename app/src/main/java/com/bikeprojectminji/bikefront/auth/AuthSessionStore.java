@@ -20,6 +20,7 @@ public class AuthSessionStore {
         return !getAccessToken().isBlank();
     }
 
+
     public String getDisplayName() {
         return sharedPreferences.getString(KEY_DISPLAY_NAME, "") == null ? "" : sharedPreferences.getString(KEY_DISPLAY_NAME, "");
     }
@@ -29,7 +30,8 @@ public class AuthSessionStore {
     }
 
     public String getAccessToken() {
-        return sharedPreferences.getString(KEY_ACCESS_TOKEN, "") == null ? "" : sharedPreferences.getString(KEY_ACCESS_TOKEN, "");
+        String saved = sharedPreferences.getString(KEY_ACCESS_TOKEN, "");
+        return saved == null ? "" : saved;
     }
 
     public void saveSession(String displayName, String profileImageUrl, String accessToken) {
@@ -37,10 +39,10 @@ public class AuthSessionStore {
                 .putString(KEY_DISPLAY_NAME, displayName)
                 .putString(KEY_PROFILE_IMAGE_URL, profileImageUrl)
                 .putString(KEY_ACCESS_TOKEN, accessToken)
-                .apply();
+                .commit();
     }
 
     public void clear() {
-        sharedPreferences.edit().clear().apply();
+        sharedPreferences.edit().clear().commit();
     }
 }
