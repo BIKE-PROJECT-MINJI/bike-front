@@ -81,8 +81,8 @@ jobs:
           body: |
             ## Summary
             - Built Android release APK from merged frontend code
-            - API base URL: `${{ env.RELEASE_API_BASE_URL }}`
+            - 홈, 내 정보, 코스 미리보기, 자유주행/코스 저장/공유 흐름을 현재 구조에 맞게 정리했습니다.
 
             ## Verification
             - ./gradlew testDebugUnitTest
-            - ./gradlew assembleRelease -PreleaseApiBaseUrl=${{ env.RELEASE_API_BASE_URL }}
+            - ./gradlew assembleRelease
