@@ -5,8 +5,8 @@ import android.os.Looper;
 
 import com.bikeprojectminji.bikefront.config.AppConfig;
 
-import org.json.JSONObject;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -25,15 +25,115 @@ public class HttpAuthLoginGateway implements AuthLoginGateway {
 
     @Override
     public void register(String email, String password, String displayName, Callback callback) {
-        executeAuth("/api/v1/auth/register", buildRegisterBody(email, password, displayName), email, displayName, callback);
+        executeAuth("/api/v1/auth/register", buildRegisterBody(email, password, displayName), email, callback);
     }
 
     @Override
     public void login(String email, String password, Callback callback) {
-        executeAuth("/api/v1/auth/login", buildLoginBody(email, password), email, null, callback);
+        executeAuth("/api/v1/auth/login", buildLoginBody(email, password), email, callback);
     }
 
-    private void executeAuth(String path, JSONObject requestJson, String email, String fallbackDisplayName, Callback callback) {
+    @Override
+    public void refresh(String refreshToken, Callback callback) {
+        executorService.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(AppConfig.API_BASE_URL + "/api/v1/auth/refresh");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(AppConfig.CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(AppConfig.READ_TIMEOUT_MS);
+                connection.setRequestMethod("POST");
+                connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                connection.setDoOutput(true);
+
+                try (OutputStream outputStream = connection.getOutputStream()) {
+                    outputStream.write(buildRefreshBody(refreshToken).toString().getBytes(StandardCharsets.UTF_8));
+                }
+
+                int responseCode = connection.getResponseCode();
+                String responseText = readBody(responseCode >= 400 ? connection.getErrorStream() : connection.getInputStream());
+                if (responseCode >= 200 && responseCode < 300) {
+                    LoginResult result = AuthResponseJsonParser.parseLoginResult("", responseText);
+                    mainHandler.post(() -> callback.onSuccess(result));
+                    return;
+                }
+
+                postFailure(responseText, callback, "로그인 정보가 만료되었습니다. 다시 로그인해 주세요.");
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onFailure("세션을 갱신하지 못했습니다. 서버 상태를 다시 확인해 주세요."));
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        });
+    }
+
+    @Override
+    public void getMyProfile(String accessToken, ProfileCallback callback) {
+        executorService.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(AppConfig.API_BASE_URL + "/api/v1/profile/me");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(AppConfig.CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(AppConfig.READ_TIMEOUT_MS);
+                connection.setRequestMethod("GET");
+                connection.setRequestProperty("Accept", "application/json");
+                connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+                int responseCode = connection.getResponseCode();
+                String responseText = readBody(responseCode >= 400 ? connection.getErrorStream() : connection.getInputStream());
+                if (responseCode >= 200 && responseCode < 300) {
+                    ProfileResult result = AuthResponseJsonParser.parseProfileResult(responseText);
+                    mainHandler.post(() -> callback.onSuccess(result));
+                    return;
+                }
+
+                postProfileFailure(responseText, callback, "프로필 정보를 확인하지 못했습니다.");
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onFailure("프로필 정보를 확인하지 못했습니다."));
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        });
+    }
+
+    @Override
+    public void getMyActivitySummary(String accessToken, ActivitySummaryCallback callback) {
+        executorService.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(AppConfig.API_BASE_URL + "/api/v1/profile/me/activity-summary");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(AppConfig.CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(AppConfig.READ_TIMEOUT_MS);
+                connection.setRequestMethod("GET");
+                connection.setRequestProperty("Accept", "application/json");
+                connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+                int responseCode = connection.getResponseCode();
+                String responseText = readBody(responseCode >= 400 ? connection.getErrorStream() : connection.getInputStream());
+                if (responseCode >= 200 && responseCode < 300) {
+                    ActivitySummaryResult result = AuthResponseJsonParser.parseActivitySummaryResult(responseText);
+                    mainHandler.post(() -> callback.onSuccess(result));
+                    return;
+                }
+
+                postActivitySummaryFailure(responseText, callback, "활동 요약을 확인하지 못했습니다.");
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onFailure("활동 요약을 확인하지 못했습니다."));
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        });
+    }
+
+    private void executeAuth(String path, JSONObject requestJson, String email, Callback callback) {
         executorService.execute(() -> {
             HttpURLConnection connection = null;
             try {
@@ -52,23 +152,12 @@ public class HttpAuthLoginGateway implements AuthLoginGateway {
                 int responseCode = connection.getResponseCode();
                 String responseText = readBody(responseCode >= 400 ? connection.getErrorStream() : connection.getInputStream());
                 if (responseCode >= 200 && responseCode < 300) {
-                    JSONObject root = new JSONObject(responseText);
-                    JSONObject data = root.getJSONObject("data");
-                    mainHandler.post(() -> callback.onSuccess(new LoginResult(
-                            email,
-                            data.optString("displayName", fallbackDisplayName == null ? "" : fallbackDisplayName),
-                            data.optString("accessToken", "")
-                    )));
+                    LoginResult result = AuthResponseJsonParser.parseLoginResult(email, responseText);
+                    mainHandler.post(() -> callback.onSuccess(result));
                     return;
                 }
 
-                String message = "현재 서버에서 로그인을 준비 중입니다. 잠시 후 다시 시도해 주세요.";
-                if (responseText != null && !responseText.isBlank()) {
-                    JSONObject root = new JSONObject(responseText);
-                    message = root.optString("message", message);
-                }
-                String finalMessage = message;
-                mainHandler.post(() -> callback.onFailure(finalMessage));
+                postFailure(responseText, callback, "현재 서버에서 로그인을 준비 중입니다. 잠시 후 다시 시도해 주세요.");
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onFailure("현재 서버에서 로그인을 사용할 수 없습니다. 공개 코스만 둘러볼 수 있습니다."));
             } finally {
@@ -89,6 +178,46 @@ public class HttpAuthLoginGateway implements AuthLoginGateway {
             return requestJson;
         } catch (JSONException exception) {
             throw new IllegalStateException("회원가입 요청을 만들 수 없습니다.", exception);
+        }
+    }
+
+    private JSONObject buildRefreshBody(String refreshToken) {
+        try {
+            JSONObject requestJson = new JSONObject();
+            requestJson.put("refreshToken", refreshToken);
+            return requestJson;
+        } catch (JSONException exception) {
+            throw new IllegalStateException("세션 갱신 요청을 만들 수 없습니다.", exception);
+        }
+    }
+
+    private void postFailure(String responseText, Callback callback, String fallbackMessage) {
+        String message = extractMessage(responseText, fallbackMessage);
+        String finalMessage = message;
+        mainHandler.post(() -> callback.onFailure(finalMessage));
+    }
+
+    private void postProfileFailure(String responseText, ProfileCallback callback, String fallbackMessage) {
+        String message = extractMessage(responseText, fallbackMessage);
+        String finalMessage = message;
+        mainHandler.post(() -> callback.onFailure(finalMessage));
+    }
+
+    private void postActivitySummaryFailure(String responseText, ActivitySummaryCallback callback, String fallbackMessage) {
+        String message = extractMessage(responseText, fallbackMessage);
+        String finalMessage = message;
+        mainHandler.post(() -> callback.onFailure(finalMessage));
+    }
+
+    private String extractMessage(String responseText, String fallbackMessage) {
+        if (responseText == null || responseText.isBlank()) {
+            return fallbackMessage;
+        }
+        try {
+            JSONObject root = new JSONObject(responseText);
+            return root.optString("message", fallbackMessage);
+        } catch (JSONException exception) {
+            return fallbackMessage;
         }
     }
 
