@@ -1,5 +1,6 @@
 package com.bikeprojectminji.bikefront.free
 
+import com.bikeprojectminji.bikefront.ride.RideRecordGateway
 import com.bikeprojectminji.bikefront.ridemap.CourseRoutePointsGateway
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -39,6 +40,24 @@ class FreeRideSaveCoordinatorTest {
         assertEquals(1, ready.draft.routePoints.size)
         assertEquals(1.2, ready.distanceKm, 0.0)
         assertEquals(2, ready.durationMinutes)
+    }
+
+    @Test
+    fun `prepare uses active duration when paused time should be excluded`() {
+        val result = FreeRideSaveCoordinator.prepare(
+            accessToken = "token",
+            trackedPoints = listOf(RideRecordGateway.RideRecordPoint(0, 37.0, 127.0)),
+            routePoints = emptyList(),
+            distanceMeters = 1200,
+            startedAtMillis = 1_000L,
+            endedAtMillis = 121_000L,
+            activeDurationMillis = 61_000L,
+        )
+
+        assertTrue(result is FreeRideSavePreparation.Ready)
+        val ready = result as FreeRideSavePreparation.Ready
+        assertEquals(1, ready.durationMinutes)
+        assertEquals(61, ready.draft.durationSec)
     }
 
 }

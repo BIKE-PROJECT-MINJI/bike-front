@@ -31,6 +31,7 @@ internal object FreeRideSaveCoordinator {
         distanceMeters: Int,
         startedAtMillis: Long,
         endedAtMillis: Long,
+        activeDurationMillis: Long? = null,
     ): FreeRideSavePreparation {
         if (accessToken.isBlank()) {
             return FreeRideSavePreparation.Blocked("로그인이 필요합니다.", requiresAuth = true)
@@ -39,17 +40,18 @@ internal object FreeRideSaveCoordinator {
         if (sourcePoints.isEmpty()) {
             return FreeRideSavePreparation.Blocked("저장할 주행 기록이 없습니다.")
         }
+        val durationMillis = activeDurationMillis?.coerceAtLeast(0L) ?: (endedAtMillis - startedAtMillis).coerceAtLeast(0L)
         val draft = RideRecordGateway.RideRecordDraft(
             OffsetDateTime.ofInstant(Instant.ofEpochMilli(startedAtMillis), ZoneId.systemDefault()),
             OffsetDateTime.ofInstant(Instant.ofEpochMilli(endedAtMillis), ZoneId.systemDefault()),
             distanceMeters,
-            ((endedAtMillis - startedAtMillis) / 1000L).toInt(),
+            (durationMillis / 1000L).toInt(),
             sourcePoints,
         )
         return FreeRideSavePreparation.Ready(
             accessToken = accessToken,
             draft = draft,
-            durationMinutes = ((endedAtMillis - startedAtMillis) / 60000L).toInt(),
+            durationMinutes = (durationMillis / 60000L).toInt(),
             distanceKm = distanceMeters / 1000.0,
         )
     }

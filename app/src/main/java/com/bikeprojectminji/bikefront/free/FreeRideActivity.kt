@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.*
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -90,6 +92,9 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     var processingRideRecordId by remember { mutableStateOf<Long?>(null) }
     var processingRideRecordMessage by remember { mutableStateOf(context.getString(R.string.ride_finish_processing_message)) }
     var processingRideRecordFailed by remember { mutableStateOf(false) }
+    var saveFailureState by remember { mutableStateOf<FreeRideSaveFailureUiState>(FreeRideSaveFailureUiState.None) }
+    var showCourseCompletionDialog by remember(courseId) { mutableStateOf(false) }
+    var courseCompletionDialogConsumed by remember(courseId) { mutableStateOf(false) }
     val startedAtMillis = remember { System.currentTimeMillis() }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -106,7 +111,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         if (!locationGranted) permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
-    val trackingState = rememberFreeRideTrackingState(
+    val trackingController = rememberFreeRideTrackingState(
         courseId = courseId,
         locationGranted = locationGranted,
         locationManager = locationManager,
@@ -115,40 +120,47 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         ridePolicyUiMapper = ridePolicyUiMapper,
     )
 
-    val speedState: RideSpeedUiState = speedFormatter.format(trackingState.currentLocation, trackingState.previousLocation)
-    val locationState = remember(locationGranted, trackingState.currentLocation, speedState.message) {
+    val currentLocation = trackingController.currentLocation
+    val previousLocation = trackingController.previousLocation
+    val speedState: RideSpeedUiState = speedFormatter.format(currentLocation, previousLocation)
+    val locationState = remember(locationGranted, currentLocation, speedState.message) {
         RideLocationHudStateResolver.resolve(
             locationGranted,
-            trackingState.currentLocation != null,
-            trackingState.currentLocation?.hasAccuracy() == true && trackingState.currentLocation.accuracy > 50f,
+            currentLocation != null,
+            currentLocation?.hasAccuracy() == true && currentLocation.accuracy > 50f,
             "위치 권한이 필요합니다.",
-            "현재 위치를 확인하는 중입니다.",
+            "현재 위치 신호를 기다리는 중입니다.",
             speedState.message,
         )
     }
-    val distanceMeters = remember(trackingState.trackedPoints.size) {
-        if (trackingState.trackedPoints.size < 2) 0 else trackingState.trackedPoints.zipWithNext().sumOf { (a, b) ->
+    val distanceMeters = remember(trackingController.trackedPoints.size) {
+        if (trackingController.trackedPoints.size < 2) 0 else trackingController.trackedPoints.zipWithNext().sumOf { (a, b) ->
             val results = FloatArray(1)
             android.location.Location.distanceBetween(a.latitude, a.longitude, b.latitude, b.longitude, results)
             results[0].toInt()
         }
     }
-    val statusMessage = remember(trackingState.policyState?.message, speedState.message, trackingState.weatherState.temperatureMessage) {
-        RideStatusMessageResolver.resolve(
-            "주행 상태를 확인하는 중입니다.",
-            sanitizeHudMessage(trackingState.policyState?.message),
-            "현재 위치를 기다리는 중입니다.",
-            sanitizeHudMessage(speedState.message),
-            "현재 위치를 확인하는 중입니다.",
-            sanitizeHudMessage(trackingState.weatherState.temperatureMessage),
-            "날씨를 확인하는 중입니다.",
-        )
+    val statusMessage = remember(trackingController.isTrackingActive, trackingController.policyState?.message, speedState.message, trackingController.weatherState.temperatureMessage) {
+        if (!trackingController.isTrackingActive) {
+            "일시정지됨. 다시 누르면 주행을 이어갑니다."
+        } else {
+            RideStatusMessageResolver.resolve(
+                "주행 상태를 확인하는 중입니다.",
+                sanitizeHudMessage(trackingController.policyState?.message),
+                "현재 위치 신호를 기다리는 중입니다.",
+                sanitizeHudMessage(speedState.message),
+                "현재 위치 신호를 기다리는 중입니다.",
+                sanitizeHudMessage(trackingController.weatherState.temperatureMessage),
+                "날씨를 확인하는 중입니다.",
+            )
+        }
     }
 
     fun openCourseEditor(preparation: FreeRideSavePreparation.Ready, rideRecordId: Long) {
         processingRideRecordId = null
         processingRideRecordFailed = false
         processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+        saveFailureState = FreeRideSaveFailureUiState.None
         context.startActivity(
             FreeRideSaveCoordinator.createEditorIntent(
                 context = context,
@@ -165,23 +177,54 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                 when (result.status) {
                     "READY" -> openCourseEditor(preparation, result.rideRecordId)
                     "FAILED" -> {
-                        processingRideRecordId = result.rideRecordId
-                        processingRideRecordFailed = true
-                        processingRideRecordMessage = result.errorMessage ?: context.getString(R.string.ride_finish_processing_failed_message)
+                        when (val failureState = FreeRideSaveFailureResolver.resolve(
+                            message = result.errorMessage,
+                            fallbackMessage = context.getString(R.string.ride_finish_processing_failed_message)
+                        )) {
+                            is FreeRideSaveFailureUiState.ShortRide -> {
+                                processingRideRecordId = null
+                                processingRideRecordFailed = false
+                                processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+                                saveFailureState = failureState
+                            }
+                            is FreeRideSaveFailureUiState.Generic -> {
+                                processingRideRecordId = result.rideRecordId
+                                processingRideRecordFailed = true
+                                processingRideRecordMessage = failureState.message
+                                saveFailureState = FreeRideSaveFailureUiState.None
+                            }
+                            FreeRideSaveFailureUiState.None -> Unit
+                        }
                     }
                     else -> {
                         processingRideRecordId = result.rideRecordId
                         processingRideRecordFailed = false
                         processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+                        saveFailureState = FreeRideSaveFailureUiState.None
                         mainHandler.postDelayed({ pollRideRecordFinalization(preparation, rideRecordId) }, 2000L)
                     }
                 }
             }
 
             override fun onFailure(message: String) {
-                processingRideRecordId = rideRecordId
-                processingRideRecordFailed = true
-                processingRideRecordMessage = message
+                when (val failureState = FreeRideSaveFailureResolver.resolve(
+                    message = message,
+                    fallbackMessage = context.getString(R.string.ride_finish_processing_failed_message)
+                )) {
+                    is FreeRideSaveFailureUiState.ShortRide -> {
+                        processingRideRecordId = null
+                        processingRideRecordFailed = false
+                        processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+                        saveFailureState = failureState
+                    }
+                    is FreeRideSaveFailureUiState.Generic -> {
+                        processingRideRecordId = rideRecordId
+                        processingRideRecordFailed = true
+                        processingRideRecordMessage = failureState.message
+                        saveFailureState = FreeRideSaveFailureUiState.None
+                    }
+                    FreeRideSaveFailureUiState.None -> Unit
+                }
             }
         })
     }
@@ -191,17 +234,19 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         val endedAtMillis = System.currentTimeMillis()
         val preparation = FreeRideSaveCoordinator.prepare(
             accessToken = authSessionStore.accessToken,
-            trackedPoints = trackingState.trackedPoints,
+            trackedPoints = trackingController.trackedPoints,
             routePoints = routePoints,
             distanceMeters = distanceMeters,
             startedAtMillis = startedAtMillis,
             endedAtMillis = endedAtMillis,
+            activeDurationMillis = trackingController.activeElapsedMillis(),
         )
         if (preparation !is FreeRideSavePreparation.Ready) {
             return
         }
         processingRideRecordFailed = false
         processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+        saveFailureState = FreeRideSaveFailureUiState.None
         rideRecordGateway.regenerateRideRecord(preparation.accessToken, rideRecordId, object : RideRecordGateway.StatusCallback {
             override fun onSuccess(result: RideRecordGateway.RideRecordFinalizationStatusResult) {
                 processingRideRecordId = result.rideRecordId
@@ -209,8 +254,23 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
             }
 
             override fun onFailure(message: String) {
-                processingRideRecordFailed = true
-                processingRideRecordMessage = message
+                when (val failureState = FreeRideSaveFailureResolver.resolve(
+                    message = message,
+                    fallbackMessage = context.getString(R.string.ride_finish_processing_failed_message)
+                )) {
+                    is FreeRideSaveFailureUiState.ShortRide -> {
+                        processingRideRecordId = null
+                        processingRideRecordFailed = false
+                        processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+                        saveFailureState = failureState
+                    }
+                    is FreeRideSaveFailureUiState.Generic -> {
+                        processingRideRecordFailed = true
+                        processingRideRecordMessage = failureState.message
+                        saveFailureState = FreeRideSaveFailureUiState.None
+                    }
+                    FreeRideSaveFailureUiState.None -> Unit
+                }
             }
         })
     }
@@ -219,11 +279,12 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         val endedAtMillis = System.currentTimeMillis()
         when (val preparation = FreeRideSaveCoordinator.prepare(
             accessToken = authSessionStore.accessToken,
-            trackedPoints = trackingState.trackedPoints,
+            trackedPoints = trackingController.trackedPoints,
             routePoints = routePoints,
             distanceMeters = distanceMeters,
             startedAtMillis = startedAtMillis,
             endedAtMillis = endedAtMillis,
+            activeDurationMillis = trackingController.activeElapsedMillis(),
         )) {
             is FreeRideSavePreparation.Blocked -> {
                 if (preparation.requiresAuth) {
@@ -232,6 +293,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
             }
             is FreeRideSavePreparation.Ready -> {
                 inFlightSave = true
+                saveFailureState = FreeRideSaveFailureUiState.None
                 rideRecordGateway.saveRideRecord(preparation.accessToken, preparation.draft, object : RideRecordGateway.Callback {
                     override fun onSuccess(result: RideRecordGateway.RideRecordSaveResult) {
                         inFlightSave = false
@@ -247,8 +309,24 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
 
                     override fun onFailure(message: String) {
                         inFlightSave = false
-                        processingRideRecordFailed = true
-                        processingRideRecordMessage = message
+                        when (val failureState = FreeRideSaveFailureResolver.resolve(
+                            message = message,
+                            fallbackMessage = context.getString(R.string.ride_finish_processing_failed_message)
+                        )) {
+                            is FreeRideSaveFailureUiState.ShortRide -> {
+                                processingRideRecordId = null
+                                processingRideRecordFailed = false
+                                processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+                                saveFailureState = failureState
+                            }
+                            is FreeRideSaveFailureUiState.Generic -> {
+                                processingRideRecordId = -1L
+                                processingRideRecordFailed = true
+                                processingRideRecordMessage = failureState.message
+                                saveFailureState = FreeRideSaveFailureUiState.None
+                            }
+                            FreeRideSaveFailureUiState.None -> Unit
+                        }
                     }
                 })
             }
@@ -262,11 +340,33 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         }
     }
 
-    val distanceText = if (distanceMeters > 0) String.format("%.1fkm", distanceMeters / 1000.0) else "--"
-    val windValue = trackingState.weatherState.windText.ifBlank { "--" }
-    val tempValue = trackingState.weatherState.temperatureText.ifBlank { "--" }
-    val policyLabel = trackingState.policyState?.stateLabel ?: "확인 중"
-    val bannerMessage = sanitizeHudMessage(trackingState.policyState?.takeIf { it.isShowBanner && it.bannerMessage.isNotBlank() }?.bannerMessage)
+    val windValue = trackingController.weatherState.windText.ifBlank { "--" }
+    val tempValue = trackingController.weatherState.temperatureText.ifBlank { "--" }
+    val policyLabel = trackingController.policyState?.stateLabel ?: "확인 중"
+    val bannerMessage = sanitizeHudMessage(trackingController.policyState?.takeIf { it.isShowBanner && it.bannerMessage.isNotBlank() }?.bannerMessage)
+    val destinationDistanceMeters = remember(courseId, currentLocation, routePoints) {
+        if (courseId == null) {
+            null
+        } else {
+            trackingController.distanceToCourseDestinationMeters(routePoints)
+        }
+    }
+
+    LaunchedEffect(courseId, destinationDistanceMeters, routePoints, inFlightSave, processingRideRecordId, saveFailureState) {
+        val shouldBlockCompletionDialog = courseId == null || routePoints.isEmpty() || inFlightSave || processingRideRecordId != null || saveFailureState !is FreeRideSaveFailureUiState.None
+        if (shouldBlockCompletionDialog) {
+            showCourseCompletionDialog = false
+            return@LaunchedEffect
+        }
+
+        if (destinationDistanceMeters != null && destinationDistanceMeters <= COURSE_COMPLETION_THRESHOLD_METERS) {
+            if (!courseCompletionDialogConsumed) {
+                showCourseCompletionDialog = true
+            }
+        } else {
+            showCourseCompletionDialog = false
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         GajaMapPreview(
@@ -282,10 +382,10 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.28f),
+                        0f to Color.Black.copy(alpha = 0.36f),
                         0.18f to Color.Transparent,
                         0.76f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = 0.34f),
+                        1f to Color.Black.copy(alpha = 0.42f),
                     )
                 )
         )
@@ -325,12 +425,21 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
             RideControlDock(
                 statusText = statusMessage,
                 inFlightSave = inFlightSave,
+                isTrackingActive = trackingController.isTrackingActive,
+                onToggleTracking = {
+                    if (trackingController.isTrackingActive) {
+                        trackingController.pauseTracking()
+                    } else {
+                        trackingController.resumeTracking()
+                    }
+                },
                 onSave = { if (!inFlightSave) saveAndOpenEditor() },
                 onStop = onFinish,
             )
         }
 
         if (processingRideRecordId != null) {
+            val canRetryGeneration = processingRideRecordId != null && processingRideRecordId!! > 0L
             AlertDialog(
                 onDismissRequest = {},
                 title = {
@@ -341,8 +450,18 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                 },
                 confirmButton = {
                     if (processingRideRecordFailed) {
-                        Button(onClick = { regenerateRideRecord() }) {
-                            Text(context.getString(R.string.ride_finish_processing_retry_button))
+                        if (canRetryGeneration) {
+                            Button(onClick = { regenerateRideRecord() }) {
+                                Text(context.getString(R.string.ride_finish_processing_retry_button))
+                            }
+                        } else {
+                            TextButton(onClick = {
+                                processingRideRecordId = null
+                                processingRideRecordFailed = false
+                                processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+                            }) {
+                                Text("확인")
+                            }
                         }
                     }
                 },
@@ -355,8 +474,58 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                 }
             )
         }
+        if (showCourseCompletionDialog) {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("코스 완주 안내") },
+                text = {
+                    Text(
+                        destinationDistanceMeters?.let {
+                            "도착 지점 ${it}m 이내에 들어왔습니다. 지금 기록을 저장하고 주행을 마칠까요?"
+                        } ?: "도착 지점 150m 이내에 들어왔습니다. 지금 기록을 저장하고 주행을 마칠까요?",
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        showCourseCompletionDialog = false
+                        courseCompletionDialogConsumed = true
+                        if (!inFlightSave && processingRideRecordId == null) {
+                            saveAndOpenEditor()
+                        }
+                    }) {
+                        Text("기록 저장 후 종료")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showCourseCompletionDialog = false
+                        courseCompletionDialogConsumed = true
+                    }) {
+                        Text("계속 주행")
+                    }
+                },
+            )
+        }
+        if (saveFailureState is FreeRideSaveFailureUiState.ShortRide) {
+            val shortRideState = saveFailureState as FreeRideSaveFailureUiState.ShortRide
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("기록 저장 불가") },
+                text = { Text(shortRideState.message) },
+                confirmButton = {
+                    Button(onClick = {
+                        saveFailureState = FreeRideSaveFailureUiState.None
+                        onFinish()
+                    }) {
+                        Text("확인")
+                    }
+                }
+            )
+        }
     }
 }
+
+private const val COURSE_COMPLETION_THRESHOLD_METERS = 150
 
 @Composable
 fun RideHudTopBar(
@@ -380,8 +549,8 @@ fun RideHudTopBar(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     RideStatusBadge(text = "LIVE", containerColor = GajaColors.Primary)
-                    RideStatusBadge(text = locationText, containerColor = Color.Black.copy(alpha = 0.30f))
-                    RideStatusBadge(text = policyText, containerColor = Color.Black.copy(alpha = 0.30f))
+                    RideStatusBadge(text = locationText, containerColor = GajaColors.Carbon.copy(alpha = 0.82f))
+                    RideStatusBadge(text = policyText, containerColor = GajaColors.Carbon.copy(alpha = 0.82f))
                 }
                 SecondaryConditionsRow(tempValue = tempValue, windValue = windValue)
             }
@@ -391,7 +560,7 @@ fun RideHudTopBar(
                 MapControlButton(icon = Icons.Default.Remove, onClick = onZoomOut)
                 HudControlButton(
                     icon = Icons.Default.Close,
-                    containerColor = Color.Black.copy(alpha = 0.30f),
+                    containerColor = GajaColors.Carbon.copy(alpha = 0.82f),
                     size = 40.dp,
                     onClick = onClose,
                 )
@@ -421,7 +590,7 @@ fun RideStatusBadge(text: String, containerColor: Color) {
     Surface(
         color = containerColor,
         shape = CircleShape,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
     ) {
         Text(
             text = text,
@@ -445,7 +614,17 @@ fun PrimaryRideMetric(
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = value,
-            style = TextStyle(fontSize = 64.sp, fontWeight = FontWeight.Black, letterSpacing = (-3).sp, color = Color.White),
+            style = TextStyle(
+                fontSize = 64.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-3).sp,
+                color = Color.White,
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.72f),
+                    offset = androidx.compose.ui.geometry.Offset(0f, 4f),
+                    blurRadius = 18f,
+                ),
+            ),
         )
         Text(
             text = unit,
@@ -455,7 +634,7 @@ fun PrimaryRideMetric(
             letterSpacing = 1.5.sp,
         )
         if (distanceText.isNotBlank()) {
-            RideStatusBadge(text = distanceText, containerColor = Color.Black.copy(alpha = 0.26f))
+            RideStatusBadge(text = distanceText, containerColor = GajaColors.Carbon.copy(alpha = 0.78f))
         }
     }
 }
@@ -472,9 +651,9 @@ fun SecondaryConditionsRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
-            color = Color.Black.copy(alpha = 0.24f),
+            color = GajaColors.Carbon.copy(alpha = 0.78f),
             shape = CircleShape,
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
         ) {
             Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 CompactMetricChip(label = "기온", value = tempValue)
@@ -488,6 +667,8 @@ fun SecondaryConditionsRow(
 fun RideControlDock(
     statusText: String,
     inFlightSave: Boolean,
+    isTrackingActive: Boolean,
+    onToggleTracking: () -> Unit,
     onSave: () -> Unit,
     onStop: () -> Unit,
 ) {
@@ -496,16 +677,16 @@ fun RideControlDock(
             Text(
                 text = statusText,
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.78f),
+                color = Color.White.copy(alpha = 0.88f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             HudControlButton(
-                icon = Icons.Default.Pause,
-                containerColor = Color.Black.copy(alpha = 0.28f),
-                onClick = {},
+                icon = if (isTrackingActive) Icons.Default.Pause else Icons.Default.PlayArrow,
+                containerColor = GajaColors.Carbon.copy(alpha = 0.80f),
+                onClick = onToggleTracking,
             )
             GajaPrimaryButton(
                 text = if (inFlightSave) "저장 중..." else "기록 저장",
@@ -544,7 +725,7 @@ fun CompactMetricChip(label: String, value: String) {
 fun MapControlButton(icon: ImageVector, onClick: () -> Unit) {
     HudControlButton(
         icon = icon,
-        containerColor = Color.Black.copy(alpha = 0.28f),
+        containerColor = GajaColors.Carbon.copy(alpha = 0.80f),
         size = 40.dp,
         onClick = onClick,
     )
