@@ -12,7 +12,7 @@ configurations.configureEach {
 
 def quote = { value -> "\"${value}\"" }
 def debugApiBaseUrl = providers.gradleProperty("debugApiBaseUrl").orElse("http://10.0.2.2:8080").get()
-def releaseApiBaseUrl = providers.gradleProperty("releaseApiBaseUrl").orElse("https://bike-back-production.up.railway.app").get()
+def releaseApiBaseUrl = providers.gradleProperty("releaseApiBaseUrl").orElse("http://3.35.168.38").get()
 def signingPropsFile = rootProject.file("signing.local.properties")
 def signingProps = new Properties()
 def hasLocalSigning = signingPropsFile.exists()
