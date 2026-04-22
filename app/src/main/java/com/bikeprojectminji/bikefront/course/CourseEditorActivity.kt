@@ -1,5 +1,6 @@
 package com.bikeprojectminji.bikefront.course
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -36,6 +37,7 @@ class CourseEditorActivity : ComponentActivity() {
 
     private lateinit var authSessionStore: AuthSessionStore
     private lateinit var courseWriteGateway: CourseWriteGateway
+    private lateinit var courseShareGateway: CourseShareGateway
     private lateinit var recordedCourseStore: RecordedCourseStore
     private lateinit var analyticsTracker: AnalyticsTracker
 
@@ -44,11 +46,16 @@ class CourseEditorActivity : ComponentActivity() {
     private var visibilityState by mutableStateOf("PRIVATE")
     private var helperMessageState by mutableStateOf("")
     private var inFlightState by mutableStateOf(false)
+    private var savedCourseIdState by mutableStateOf<Long?>(null)
+    private var savedVisibilityState by mutableStateOf<String?>(null)
+    private var savedTitleState by mutableStateOf<String?>(null)
+    private var savedDescriptionState by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         authSessionStore = AuthSessionStore(this)
         courseWriteGateway = HttpCourseWriteGateway()
+        courseShareGateway = HttpCourseShareGateway()
         recordedCourseStore = RecordedCourseStore(this)
         analyticsTracker = AnalyticsTracker(this)
         helperMessageState = getString(R.string.course_editor_helper_default)
@@ -60,16 +67,14 @@ class CourseEditorActivity : ComponentActivity() {
                     title = titleState,
                     description = descriptionState,
                     visibility = visibilityState,
+                    savedCourseId = savedCourseIdState,
                     helperMessage = helperMessageState,
                     inFlight = inFlightState,
                     onTitleChange = { titleState = it },
                     onDescriptionChange = { descriptionState = it },
                     onVisibilityChange = { visibilityState = it },
                     onSave = { saveCourse() },
-                    onShare = {
-                        helperMessageState = getString(R.string.course_editor_share_ready_message)
-                        Toast.makeText(this, R.string.course_editor_share_ready_toast, Toast.LENGTH_SHORT).show()
-                    },
+                    onShare = { shareCourse() },
                 )
             }
         }
@@ -109,6 +114,10 @@ class CourseEditorActivity : ComponentActivity() {
                 override fun onSuccess(result: CourseWriteGateway.CourseCreateResult) {
                     inFlightState = false
                     analyticsTracker.track("course_create_completed", "course_editor", mapOf("courseId" to result.courseId, "rideRecordId" to rideRecordId, "visibility" to result.visibility))
+                    savedCourseIdState = result.courseId
+                    savedVisibilityState = result.visibility
+                    savedTitleState = safeTitle
+                    savedDescriptionState = safeDescription
                     recordedCourseStore.save(
                         RecordedCourseItem(
                             id = result.courseId,
@@ -117,7 +126,7 @@ class CourseEditorActivity : ComponentActivity() {
                             estimatedDurationMin = intent.getIntExtra(EXTRA_DURATION_MIN, 0),
                         ),
                     )
-                    helperMessageState = getString(R.string.course_editor_save_success_message, result.courseId, result.visibility)
+                    helperMessageState = getString(R.string.course_editor_save_success_message, result.courseId, visibilityLabel(result.visibility))
                     Toast.makeText(this@CourseEditorActivity, R.string.course_editor_save_success_toast, Toast.LENGTH_SHORT).show()
                 }
 
@@ -129,12 +138,109 @@ class CourseEditorActivity : ComponentActivity() {
         )
     }
 
+    private fun shareCourse() {
+        val accessToken = authSessionStore.accessToken
+        if (accessToken.isBlank()) {
+            helperMessageState = getString(R.string.course_editor_login_required_message)
+            return
+        }
+
+        val savedCourseId = savedCourseIdState
+        if (savedCourseId == null || savedCourseId <= 0L) {
+            helperMessageState = getString(R.string.course_editor_share_requires_save_message)
+            return
+        }
+
+        if (hasUnsavedCourseChanges()) {
+            helperMessageState = getString(R.string.course_editor_share_unsaved_changes_message)
+            return
+        }
+
+        if (savedVisibilityState == "PRIVATE") {
+            helperMessageState = getString(R.string.course_editor_private_share_blocked_message)
+            return
+        }
+
+        inFlightState = true
+        helperMessageState = getString(R.string.course_editor_sharing_message)
+        courseShareGateway.shareCourse(accessToken, savedCourseId, object : CourseShareGateway.Callback {
+            override fun onSuccess(result: CourseShareGateway.ShareResult) {
+                inFlightState = false
+                if (result.visibility == "PRIVATE") {
+                    helperMessageState = getString(R.string.course_editor_private_share_blocked_message)
+                    return
+                }
+                if (result.shareUrl.isBlank()) {
+                    helperMessageState = getString(R.string.course_editor_share_missing_url_message)
+                    return
+                }
+
+                helperMessageState = getString(R.string.course_editor_share_success_message, visibilityLabel(result.visibility))
+                openAndroidShareSheet(titleState.trim().ifBlank { getString(R.string.course_editor_share_default_title) }, result.shareUrl)
+            }
+
+            override fun onFailure(message: String) {
+                inFlightState = false
+                helperMessageState = message
+            }
+        })
+    }
+
+    private fun hasUnsavedCourseChanges(): Boolean {
+        return savedTitleState != titleState.trim() ||
+            savedDescriptionState != descriptionState.trim() ||
+            savedVisibilityState != visibilityState
+    }
+
+    private fun openAndroidShareSheet(courseTitle: String, shareUrl: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, courseTitle)
+            putExtra(Intent.EXTRA_TEXT, "$courseTitle\n$shareUrl")
+        }
+        startActivity(Intent.createChooser(shareIntent, getString(R.string.course_editor_share_chooser_title)))
+    }
+
+    private fun visibilityLabel(visibility: String): String {
+        return when (visibility) {
+            "PRIVATE" -> getString(R.string.course_visibility_private)
+            "UNLISTED" -> getString(R.string.course_visibility_unlisted)
+            "PUBLIC" -> getString(R.string.course_visibility_public)
+            else -> visibility
+        }
+    }
+
+    private fun currentPrimaryAction(savedCourseId: Long?, hasUnsavedChanges: Boolean): () -> Unit {
+        return when {
+            savedCourseId == null -> ::saveCourse
+            hasUnsavedChanges -> ::saveCourse
+            else -> ::shareCourse
+        }
+    }
+
+    private fun currentHeroButtonText(savedCourseId: Long?, hasUnsavedChanges: Boolean): String {
+        return when {
+            savedCourseId == null -> getString(R.string.course_editor_hero_add_button)
+            hasUnsavedChanges -> getString(R.string.course_editor_hero_resave_button)
+            else -> getString(R.string.course_editor_hero_share_button)
+        }
+    }
+
+    private fun currentSaveStatusMessage(savedCourseId: Long?, hasUnsavedChanges: Boolean): String {
+        return when {
+            savedCourseId == null -> getString(R.string.course_editor_save_status_before_add)
+            hasUnsavedChanges -> getString(R.string.course_editor_save_status_unsaved_changes)
+            else -> getString(R.string.course_editor_save_status_added, savedCourseId)
+        }
+    }
+
     @Composable
     private fun CourseEditorScreen(
         sourceSummary: String,
         title: String,
         description: String,
         visibility: String,
+        savedCourseId: Long?,
         helperMessage: String,
         inFlight: Boolean,
         onTitleChange: (String) -> Unit,
@@ -143,6 +249,7 @@ class CourseEditorActivity : ComponentActivity() {
         onSave: () -> Unit,
         onShare: () -> Unit,
     ) {
+        val hasUnsavedChanges = savedCourseId != null && (savedTitleState != title.trim() || savedDescriptionState != description.trim() || savedVisibilityState != visibility)
         Scaffold(
             topBar = { GajaBrandTopBar(title = "코스 편집") },
             containerColor = GajaColors.Background
@@ -157,16 +264,25 @@ class CourseEditorActivity : ComponentActivity() {
                 Spacer(Modifier.height(GajaSpacing.Small))
 
                 HeroCard(
-                    title = "코스 초안 다듬기",
-                    description = sourceSummary.ifBlank { "저장할 코스 정보를 정리하고 공개 범위를 설정합니다." },
-                    buttonText = "공개 범위 확인",
-                    onClick = onShare,
-                    icon = "course"
+                    title = "내 코스로 정리하기",
+                    description = sourceSummary.ifBlank { getString(R.string.course_editor_hero_default_description) },
+                    buttonText = currentHeroButtonText(savedCourseId, hasUnsavedChanges),
+                    onClick = currentPrimaryAction(savedCourseId, hasUnsavedChanges),
+                    icon = "내 코스"
                 )
+
+                BikeSurfaceCard {
+                    Text(
+                        text = currentSaveStatusMessage(savedCourseId, hasUnsavedChanges),
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = GajaColors.TextSecondary,
+                    )
+                }
 
                 SectionHeader(
                     title = "코스 정보 입력",
-                    subtitle = "코스 이름과 공개 범위를 정리한 뒤 저장합니다."
+                    subtitle = "코스 이름과 공개 범위를 정리하면 저장 후 바로 다시 찾을 수 있어요"
                 )
 
                 OutlinedTextField(
@@ -222,12 +338,17 @@ class CourseEditorActivity : ComponentActivity() {
 
                 Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
                     GajaPrimaryButton(
-                        text = if (inFlight) "저장 중..." else "코스 저장하기",
+                        text = if (inFlight) "저장 중..." else "내 코스에 저장",
                         enabled = !inFlight,
                         onClick = onSave
                     )
                     SecondaryActionButton(
-                        text = "공유 옵션 보기",
+                        text = when {
+                            savedCourseId == null -> "저장 후 공유 가능"
+                            hasUnsavedChanges -> "변경 내용 먼저 저장"
+                            visibility == "PRIVATE" -> "링크 공유로 바꾸기"
+                            else -> "링크 공유"
+                        },
                         enabled = !inFlight,
                         onClick = onShare
                     )
