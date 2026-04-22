@@ -71,6 +71,7 @@ fun GajaMapPreview(
     mode: MapDisplayMode = MapDisplayMode.PREVIEW,
     locationPermissionGranted: Boolean = false,
     onRoutePointsLoaded: ((List<CourseRoutePointsGateway.RoutePoint>) -> Unit)? = null,
+    onRouteLoadFailed: ((String) -> Unit)? = null,
     onViewportActionsReady: ((MapViewportActions) -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -118,12 +119,18 @@ fun GajaMapPreview(
         gateway.loadRoutePoints(courseId, object : CourseRoutePointsGateway.Callback {
             override fun onSuccess(result: CourseRoutePointsGateway.RoutePointsResult) {
                 routeState = RouteState.Success(result.points)
-                onRoutePointsLoaded?.invoke(result.points)
+                MapPreviewRouteCallbackDispatcher.dispatchRoutePointsLoaded(
+                    onRoutePointsLoaded = onRoutePointsLoaded,
+                    points = result.points,
+                )
             }
 
             override fun onFailure(message: String) {
                 routeState = RouteState.Error(message)
-                onRoutePointsLoaded?.invoke(emptyList())
+                MapPreviewRouteCallbackDispatcher.dispatchRouteLoadFailed(
+                    onRouteLoadFailed = onRouteLoadFailed,
+                    message = message,
+                )
             }
         })
     }
@@ -153,6 +160,22 @@ private sealed interface RouteState {
     data object Loading : RouteState
     data class Success(val points: List<CourseRoutePointsGateway.RoutePoint>) : RouteState
     data class Error(val message: String) : RouteState
+}
+
+internal object MapPreviewRouteCallbackDispatcher {
+    fun dispatchRoutePointsLoaded(
+        onRoutePointsLoaded: ((List<CourseRoutePointsGateway.RoutePoint>) -> Unit)?,
+        points: List<CourseRoutePointsGateway.RoutePoint>,
+    ) {
+        onRoutePointsLoaded?.invoke(points)
+    }
+
+    fun dispatchRouteLoadFailed(
+        onRouteLoadFailed: ((String) -> Unit)?,
+        message: String,
+    ) {
+        onRouteLoadFailed?.invoke(message)
+    }
 }
 
 @Composable
