@@ -4,6 +4,7 @@ public class RidePolicyUiModel {
 
     private final String stateLabel;
     private final String message;
+    private final String detailCaption;
     private final boolean showBanner;
     private final String bannerMessage;
     private final int stateTextColorResId;
@@ -13,6 +14,7 @@ public class RidePolicyUiModel {
     public RidePolicyUiModel(
             String stateLabel,
             String message,
+            String detailCaption,
             boolean showBanner,
             String bannerMessage,
             int stateTextColorResId,
@@ -21,6 +23,7 @@ public class RidePolicyUiModel {
     ) {
         this.stateLabel = stateLabel;
         this.message = message;
+        this.detailCaption = detailCaption;
         this.showBanner = showBanner;
         this.bannerMessage = bannerMessage;
         this.stateTextColorResId = stateTextColorResId;
@@ -38,6 +41,10 @@ public class RidePolicyUiModel {
 
     public boolean isShowBanner() {
         return showBanner;
+    }
+
+    public String getDetailCaption() {
+        return detailCaption;
     }
 
     public String getBannerMessage() {

@@ -17,11 +17,13 @@ public class RidePolicyUiMapper {
 
     private RidePolicyUiModel mapPreStart(RidePolicyEvaluationGateway.EvaluationResult result, String message) {
         String status = result.getStartGate().getStatus();
+        String detailCaption = formatStartGateCaption(result.getStartGate());
 
         if ("ELIGIBLE".equals(status)) {
             return new RidePolicyUiModel(
                     "주행 가능",
                     message,
+                    detailCaption,
                     false,
                     "",
                     R.color.success_text,
@@ -34,6 +36,7 @@ public class RidePolicyUiMapper {
             return new RidePolicyUiModel(
                     "시작 위치 확인 필요",
                     message,
+                    detailCaption,
                     true,
                     message,
                     R.color.error_text,
@@ -45,6 +48,7 @@ public class RidePolicyUiMapper {
         return new RidePolicyUiModel(
                 "판단 보류",
                 message,
+                detailCaption,
                 false,
                 "",
                 R.color.info_text,
@@ -60,6 +64,7 @@ public class RidePolicyUiMapper {
             return new RidePolicyUiModel(
                     "주행 중",
                     message,
+                    "",
                     false,
                     "",
                     R.color.success_text,
@@ -72,6 +77,7 @@ public class RidePolicyUiMapper {
             return new RidePolicyUiModel(
                     "경로 이탈 경고",
                     message,
+                    "",
                     true,
                     message,
                     R.color.error_text,
@@ -83,6 +89,7 @@ public class RidePolicyUiMapper {
         return new RidePolicyUiModel(
                 "판단 보류",
                 message,
+                "",
                 false,
                 "",
                 R.color.info_text,
@@ -134,5 +141,18 @@ public class RidePolicyUiMapper {
         return activePhase
                 ? "현재 위치를 다시 확인해 주세요."
                 : "위치 정보를 다시 확인해 주세요.";
+    }
+
+    private String formatStartGateCaption(RidePolicyEvaluationGateway.GateResult startGate) {
+        double distanceM = startGate.getDistanceM();
+        double thresholdM = startGate.getThresholdM();
+        if (Double.isNaN(distanceM) || Double.isNaN(thresholdM)) {
+            return "";
+        }
+        return "시작점까지 " + formatMeters(distanceM) + " · 허용 반경 " + formatMeters(thresholdM);
+    }
+
+    private String formatMeters(double meters) {
+        return Math.round(meters) + "m";
     }
 }

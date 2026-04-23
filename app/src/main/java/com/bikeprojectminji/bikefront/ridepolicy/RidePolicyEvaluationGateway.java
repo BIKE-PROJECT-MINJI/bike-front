@@ -7,10 +7,14 @@ public interface RidePolicyEvaluationGateway {
     final class GateResult {
         private final String status;
         private final String reasonCode;
+        private final double distanceM;
+        private final double thresholdM;
 
-        public GateResult(String status, String reasonCode) {
+        public GateResult(String status, String reasonCode, double distanceM, double thresholdM) {
             this.status = status;
             this.reasonCode = reasonCode;
+            this.distanceM = distanceM;
+            this.thresholdM = thresholdM;
         }
 
         public String getStatus() {
@@ -19,6 +23,14 @@ public interface RidePolicyEvaluationGateway {
 
         public String getReasonCode() {
             return reasonCode;
+        }
+
+        public double getDistanceM() {
+            return distanceM;
+        }
+
+        public double getThresholdM() {
+            return thresholdM;
         }
     }
 

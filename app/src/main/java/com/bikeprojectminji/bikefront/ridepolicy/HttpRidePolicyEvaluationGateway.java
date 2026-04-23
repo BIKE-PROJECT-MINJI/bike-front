@@ -115,12 +115,14 @@ public class HttpRidePolicyEvaluationGateway implements RidePolicyEvaluationGate
 
     private GateResult parseGate(JSONObject gate) {
         if (gate == null) {
-            return new GateResult("UNDETERMINED", "UNKNOWN_GATE");
+            return new GateResult("UNDETERMINED", "UNKNOWN_GATE", Double.NaN, Double.NaN);
         }
 
         return new GateResult(
                 gate.optString("status", "UNDETERMINED"),
-                gate.optString("reasonCode", "UNKNOWN_REASON")
+                gate.optString("reasonCode", "UNKNOWN_REASON"),
+                gate.has("distanceM") ? gate.optDouble("distanceM", Double.NaN) : Double.NaN,
+                gate.has("thresholdM") ? gate.optDouble("thresholdM", Double.NaN) : Double.NaN
         );
     }
 
