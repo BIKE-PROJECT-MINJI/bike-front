@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -258,6 +260,7 @@ class CourseEditorActivity : ComponentActivity() {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = GajaSpacing.ScreenPadding),
                 verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)
             ) {
@@ -334,7 +337,7 @@ class CourseEditorActivity : ComponentActivity() {
 
                 BikeSurfaceCard { Text(text = helperMessage, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = GajaColors.TextSecondary) }
 
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(GajaSpacing.Small))
 
                 Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
                     GajaPrimaryButton(

@@ -3,6 +3,7 @@ package com.bikeprojectminji.bikefront.ui.screen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,17 +31,8 @@ import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 @Composable
 fun GajaBrandTopBar(
     title: String,
-    onProfileClick: () -> Unit = {},
-    actions: @Composable RowScope.() -> Unit = {
-        IconButton(onClick = onProfileClick) {
-            Icon(
-                imageVector = Icons.Default.AccountCircle, 
-                contentDescription = "Profile", 
-                tint = GajaColors.TextPrimary, 
-                modifier = Modifier.size(32.dp)
-            )
-        }
-    }
+    onProfileClick: (() -> Unit)? = null,
+    actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
     TopAppBar(
         title = {
@@ -50,7 +43,27 @@ fun GajaBrandTopBar(
                 color = GajaColors.TextPrimary
             )
         },
-        actions = actions,
+        actions = {
+            when {
+                actions != null -> actions()
+                onProfileClick != null -> {
+                    Surface(
+                        shape = CircleShape,
+                        color = GajaColors.Surface,
+                        border = BorderStroke(1.dp, GajaColors.Border),
+                    ) {
+                        IconButton(onClick = onProfileClick, modifier = Modifier.size(40.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = "Profile",
+                                tint = GajaColors.TextPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = Color.Transparent,
             titleContentColor = GajaColors.TextPrimary
@@ -67,6 +80,7 @@ fun GajaPrimaryButton(
     enabled: Boolean = true,
     containerColor: Color = GajaColors.Primary
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Button(
         onClick = onClick,
         modifier = modifier
@@ -80,7 +94,13 @@ fun GajaPrimaryButton(
             disabledContentColor = GajaColors.TextTertiary
         ),
         enabled = enabled,
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 4.dp,
+            focusedElevation = 2.dp,
+            hoveredElevation = 2.dp,
+        ),
+        interactionSource = interactionSource,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -99,6 +119,7 @@ fun SecondaryActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     OutlinedButton(
         onClick = onClick,
         modifier = modifier
@@ -107,7 +128,8 @@ fun SecondaryActionButton(
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, GajaColors.Border),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = GajaColors.TextPrimary),
-        enabled = enabled
+        enabled = enabled,
+        interactionSource = interactionSource
     ) {
         Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     }
@@ -229,7 +251,20 @@ fun CourseCard(
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(course.title, style = MaterialTheme.typography.titleMedium, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(course.title, style = MaterialTheme.typography.titleMedium, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
+                    if (course.isRecorded) {
+                        Surface(shape = RoundedCornerShape(999.dp), color = GajaColors.PrimaryContainer) {
+                            Text(
+                                text = "내 저장",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = GajaColors.Primary,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     MetricLabel(GajaIconTokens.Distance, "%.1fkm".format(course.distanceKm))

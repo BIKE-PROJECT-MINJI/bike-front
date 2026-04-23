@@ -99,63 +99,63 @@ private val GajaTypography = Typography(
         fontSize = 36.sp,
         letterSpacing = (-1).sp,
         lineHeight = 42.sp,
-        color = GajaColors.TextPrimary
+        color = Color.Unspecified
     ),
     displayMedium = TextStyle(
         fontWeight = FontWeight.ExtraBold,
         fontSize = 28.sp,
         letterSpacing = (-0.5).sp,
         lineHeight = 34.sp,
-        color = GajaColors.TextPrimary
+        color = Color.Unspecified
     ),
     headlineLarge = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
         letterSpacing = (-0.2).sp,
         lineHeight = 32.sp,
-        color = GajaColors.TextPrimary
+        color = Color.Unspecified
     ),
     headlineMedium = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 20.sp,
         lineHeight = 28.sp,
-        color = GajaColors.TextPrimary
+        color = Color.Unspecified
     ),
     titleLarge = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp,
         lineHeight = 24.sp,
-        color = GajaColors.TextPrimary
+        color = Color.Unspecified
     ),
     titleMedium = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 22.sp,
-        color = GajaColors.TextPrimary
+        color = Color.Unspecified
     ),
     bodyLarge = TextStyle(
         fontWeight = FontWeight.Medium,
         fontSize = 15.sp,
         lineHeight = 22.sp,
-        color = GajaColors.TextPrimary
+        color = Color.Unspecified
     ),
     bodyMedium = TextStyle(
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
-        color = GajaColors.TextSecondary
+        color = Color.Unspecified
     ),
     labelLarge = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 13.sp,
         letterSpacing = 0.5.sp,
-        color = GajaColors.TextPrimary
+        color = Color.Unspecified
     ),
     labelSmall = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 11.sp,
         letterSpacing = 0.5.sp,
-        color = GajaColors.TextTertiary
+        color = Color.Unspecified
     )
 )
 
