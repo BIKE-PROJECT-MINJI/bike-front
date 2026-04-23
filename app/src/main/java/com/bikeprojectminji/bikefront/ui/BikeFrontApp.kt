@@ -23,7 +23,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.bikeprojectminji.bikefront.analytics.AnalyticsTracker
 import com.bikeprojectminji.bikefront.auth.AuthProfileActivity
-import com.bikeprojectminji.bikefront.course.RecordedCourseStore
 import com.bikeprojectminji.bikefront.free.FreeRideActivity
 import com.bikeprojectminji.bikefront.ui.screen.*
 import com.bikeprojectminji.bikefront.ui.theme.GajaTheme
@@ -33,7 +32,6 @@ fun BikeFrontApp() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val analyticsTracker = remember(context) { AnalyticsTracker(context) }
-    val recordedCourseStore = remember(context) { RecordedCourseStore(context) }
     val currentBackStackEntry = navController.currentBackStackEntryAsState().value
     val currentDestination = currentBackStackEntry?.destination
     val currentRoute = currentDestination?.route
@@ -148,17 +146,20 @@ fun BikeFrontApp() {
                         onOpenProfile = {
                             context.startActivity(Intent(context, AuthProfileActivity::class.java))
                         },
-                        onOpenCourses = {
-                            val latestRecordedCourseId = recordedCourseStore
-                                .load()
-                                .firstOrNull { it.id > 0L }
-                                ?.id
+                        onOpenCourses = { navController.navigate(BikeFrontRoute.COURSES) },
+                        onOpenRideRecords = { navController.navigate(BikeFrontRoute.RIDE_RECORDS) },
+                    )
+                }
 
-                            navController.navigate(
-                                latestRecordedCourseId?.let(BikeFrontRoute::coursePre)
-                                    ?: BikeFrontRoute.COURSES,
-                            )
-                        }
+                composable(BikeFrontRoute.RIDE_RECORDS) {
+                    RideRecordsScreen(
+                        innerPadding = PaddingValues(),
+                        onOpenProfile = {
+                            context.startActivity(Intent(context, AuthProfileActivity::class.java))
+                        },
+                        onOpenCourse = { linkedCourseId ->
+                            navController.navigate(BikeFrontRoute.coursePre(linkedCourseId))
+                        },
                     )
                 }
             }

@@ -15,6 +15,7 @@ object BikeFrontRoute {
     const val FREE_RIDE_PRE = "free_ride_pre"
     const val COURSE_PRE = "course_pre/{courseId}"
     const val MY_INFO = "my_info"
+    const val RIDE_RECORDS = "ride_records"
 
     fun coursePre(courseId: Long): String = "course_pre/$courseId"
 

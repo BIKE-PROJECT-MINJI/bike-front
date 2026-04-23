@@ -9,6 +9,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -66,6 +68,7 @@ fun MyInfoScreen(
     innerPadding: PaddingValues,
     onOpenProfile: () -> Unit,
     onOpenCourses: () -> Unit,
+    onOpenRideRecords: () -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -140,7 +143,7 @@ fun MyInfoScreen(
                     when (val state = profileState) {
                         is ProfileState.Loading -> LoadingStateView("내 정보를 불러오는 중")
                         is ProfileState.NotLoggedIn -> NotLoggedInContent(onOpenProfile = onOpenProfile)
-                        is ProfileState.Loaded -> ProfileContent(state, onOpenProfile, onOpenCourses)
+                        is ProfileState.Loaded -> ProfileContent(state, onOpenProfile, onOpenCourses, onOpenRideRecords)
                     }
                 }
                 Spacer(Modifier.height(40.dp))
@@ -150,7 +153,7 @@ fun MyInfoScreen(
 }
 
 @Composable
-private fun NotLoggedInContent(onOpenProfile: () -> Unit) {
+fun NotLoggedInContent(onOpenProfile: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)) {
         HeroCard(
             title = "성장을 기록하세요",
@@ -192,7 +195,12 @@ private fun NotLoggedInContent(onOpenProfile: () -> Unit) {
 }
 
 @Composable
-private fun ProfileContent(state: ProfileState.Loaded, onOpenProfile: () -> Unit, onOpenCourses: () -> Unit) {
+private fun ProfileContent(
+    state: ProfileState.Loaded,
+    onOpenProfile: () -> Unit,
+    onOpenCourses: () -> Unit,
+    onOpenRideRecords: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -284,8 +292,8 @@ private fun ProfileContent(state: ProfileState.Loaded, onOpenProfile: () -> Unit
             CompactShortcutRow(
                 icon = GajaIconTokens.Stats,
                 title = "주행 기록",
-                desc = "거리와 속도 보기",
-                onClick = onOpenProfile,
+                desc = "기록 상태와 연결 코스 확인",
+                onClick = onOpenRideRecords,
             )
             CompactShortcutRow(
                 icon = GajaIconTokens.Profile,
@@ -352,12 +360,24 @@ private fun CompactShortcutRow(
     desc: String,
     onClick: (() -> Unit)? = null,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed = interactionSource.collectIsPressedAsState().value
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onClick,
+                    )
+                } else {
+                    Modifier
+                },
+            ),
         shape = RoundedCornerShape(14.dp),
-        color = GajaColors.Surface,
+        color = if (pressed) GajaColors.PrimaryContainer else GajaColors.Surface,
         border = BorderStroke(1.dp, GajaColors.Border),
     ) {
         Row(
