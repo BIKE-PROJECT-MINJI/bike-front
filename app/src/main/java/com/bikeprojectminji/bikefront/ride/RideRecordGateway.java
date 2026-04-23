@@ -7,6 +7,10 @@ public interface RideRecordGateway {
 
     void saveRideRecord(String accessToken, RideRecordDraft draft, Callback callback);
 
+    void getRideRecords(String accessToken, HistoryCallback callback);
+
+    void getRideRecordDetail(String accessToken, long rideRecordId, DetailCallback callback);
+
     void getRideRecordStatus(String accessToken, long rideRecordId, StatusCallback callback);
 
     void regenerateRideRecord(String accessToken, long rideRecordId, StatusCallback callback);
@@ -19,6 +23,18 @@ public interface RideRecordGateway {
 
     interface StatusCallback {
         void onSuccess(RideRecordFinalizationStatusResult result);
+
+        void onFailure(String message);
+    }
+
+    interface HistoryCallback {
+        void onSuccess(RideRecordHistoryResult result);
+
+        void onFailure(String message);
+    }
+
+    interface DetailCallback {
+        void onSuccess(RideRecordDetailResult result);
 
         void onFailure(String message);
     }
@@ -89,6 +105,115 @@ public interface RideRecordGateway {
         public long getRideRecordId() { return rideRecordId; }
 
         public String getStatus() { return status; }
+
+        public String getErrorMessage() { return errorMessage; }
+    }
+
+    class RideRecordHistoryItem {
+        private final long rideRecordId;
+        private final String startedAt;
+        private final String endedAt;
+        private final int distanceM;
+        private final int durationSec;
+        private final String finalizationStatus;
+        private final Long linkedCourseId;
+
+        public RideRecordHistoryItem(
+                long rideRecordId,
+                String startedAt,
+                String endedAt,
+                int distanceM,
+                int durationSec,
+                String finalizationStatus,
+                Long linkedCourseId
+        ) {
+            this.rideRecordId = rideRecordId;
+            this.startedAt = startedAt;
+            this.endedAt = endedAt;
+            this.distanceM = distanceM;
+            this.durationSec = durationSec;
+            this.finalizationStatus = finalizationStatus;
+            this.linkedCourseId = linkedCourseId;
+        }
+
+        public long getRideRecordId() { return rideRecordId; }
+
+        public String getStartedAt() { return startedAt; }
+
+        public String getEndedAt() { return endedAt; }
+
+        public int getDistanceM() { return distanceM; }
+
+        public int getDurationSec() { return durationSec; }
+
+        public String getFinalizationStatus() { return finalizationStatus; }
+
+        public Long getLinkedCourseId() { return linkedCourseId; }
+    }
+
+    class RideRecordHistoryResult {
+        private final List<RideRecordHistoryItem> items;
+
+        public RideRecordHistoryResult(List<RideRecordHistoryItem> items) {
+            this.items = items;
+        }
+
+        public List<RideRecordHistoryItem> getItems() { return items; }
+    }
+
+    class RideRecordDetailResult {
+        private final long rideRecordId;
+        private final String status;
+        private final String startedAt;
+        private final String endedAt;
+        private final int distanceM;
+        private final int durationSec;
+        private final int rawPointCount;
+        private final int processedPointCount;
+        private final Long linkedCourseId;
+        private final String errorMessage;
+
+        public RideRecordDetailResult(
+                long rideRecordId,
+                String status,
+                String startedAt,
+                String endedAt,
+                int distanceM,
+                int durationSec,
+                int rawPointCount,
+                int processedPointCount,
+                Long linkedCourseId,
+                String errorMessage
+        ) {
+            this.rideRecordId = rideRecordId;
+            this.status = status;
+            this.startedAt = startedAt;
+            this.endedAt = endedAt;
+            this.distanceM = distanceM;
+            this.durationSec = durationSec;
+            this.rawPointCount = rawPointCount;
+            this.processedPointCount = processedPointCount;
+            this.linkedCourseId = linkedCourseId;
+            this.errorMessage = errorMessage;
+        }
+
+        public long getRideRecordId() { return rideRecordId; }
+
+        public String getStatus() { return status; }
+
+        public String getStartedAt() { return startedAt; }
+
+        public String getEndedAt() { return endedAt; }
+
+        public int getDistanceM() { return distanceM; }
+
+        public int getDurationSec() { return durationSec; }
+
+        public int getRawPointCount() { return rawPointCount; }
+
+        public int getProcessedPointCount() { return processedPointCount; }
+
+        public Long getLinkedCourseId() { return linkedCourseId; }
 
         public String getErrorMessage() { return errorMessage; }
     }

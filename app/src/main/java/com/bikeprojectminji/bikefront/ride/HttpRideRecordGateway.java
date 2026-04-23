@@ -15,6 +15,8 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -76,6 +78,108 @@ public class HttpRideRecordGateway implements RideRecordGateway {
                 mainHandler.post(() -> callback.onFailure(message));
             } catch (Exception exception) {
                 mainHandler.post(() -> callback.onFailure("주행 기록을 저장하지 못했습니다. 서버 상태를 다시 확인해 주세요."));
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        });
+    }
+
+    @Override
+    public void getRideRecords(String accessToken, HistoryCallback callback) {
+        executorService.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(AppConfig.API_BASE_URL + "/api/v1/ride-records");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(AppConfig.CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(AppConfig.READ_TIMEOUT_MS);
+                connection.setRequestMethod("GET");
+                connection.setRequestProperty("Accept", "application/json");
+                connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+                int responseCode = connection.getResponseCode();
+                String responseText = readBody(responseCode >= 400 ? connection.getErrorStream() : connection.getInputStream());
+                JSONObject root = responseText.isBlank() ? new JSONObject() : new JSONObject(responseText);
+                if (responseCode >= 200 && responseCode < 300) {
+                    JSONObject data = root.optJSONObject("data");
+                    JSONArray itemsJson = data == null ? null : data.optJSONArray("items");
+                    List<RideRecordHistoryItem> items = new ArrayList<>();
+                    if (itemsJson != null) {
+                        for (int index = 0; index < itemsJson.length(); index++) {
+                            JSONObject item = itemsJson.optJSONObject(index);
+                            if (item == null) {
+                                continue;
+                            }
+                            items.add(new RideRecordHistoryItem(
+                                    item.optLong("rideRecordId", -1L),
+                                    item.optString("startedAt", ""),
+                                    item.optString("endedAt", ""),
+                                    item.optInt("distanceM", 0),
+                                    item.optInt("durationSec", 0),
+                                    item.optString("finalizationStatus", item.optString("status", "FINALIZING")),
+                                    readOptionalLong(item, "linkedCourseId")
+                            ));
+                        }
+                    }
+                    RideRecordHistoryResult result = new RideRecordHistoryResult(items);
+                    mainHandler.post(() -> callback.onSuccess(result));
+                    return;
+                }
+                String message = root.optString("message", "주행 기록을 불러오지 못했습니다.");
+                mainHandler.post(() -> callback.onFailure(message));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onFailure("주행 기록을 불러오지 못했습니다. 서버 상태를 다시 확인해 주세요."));
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        });
+    }
+
+    @Override
+    public void getRideRecordDetail(String accessToken, long rideRecordId, DetailCallback callback) {
+        executorService.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(AppConfig.API_BASE_URL + "/api/v1/ride-records/" + rideRecordId);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(AppConfig.CONNECT_TIMEOUT_MS);
+                connection.setReadTimeout(AppConfig.READ_TIMEOUT_MS);
+                connection.setRequestMethod("GET");
+                connection.setRequestProperty("Accept", "application/json");
+                connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+                int responseCode = connection.getResponseCode();
+                String responseText = readBody(responseCode >= 400 ? connection.getErrorStream() : connection.getInputStream());
+                JSONObject root = responseText.isBlank() ? new JSONObject() : new JSONObject(responseText);
+                if (responseCode >= 200 && responseCode < 300) {
+                    JSONObject data = root.optJSONObject("data");
+                    if (data == null) {
+                        mainHandler.post(() -> callback.onFailure("주행 기록 상세 정보를 불러오지 못했습니다."));
+                        return;
+                    }
+                    RideRecordDetailResult result = new RideRecordDetailResult(
+                            data.optLong("rideRecordId", rideRecordId),
+                            data.optString("status", data.optString("finalizationStatus", "FINALIZING")),
+                            data.optString("startedAt", ""),
+                            data.optString("endedAt", ""),
+                            data.optInt("distanceM", 0),
+                            data.optInt("durationSec", 0),
+                            data.optInt("rawPointCount", 0),
+                            data.optInt("processedPointCount", 0),
+                            readOptionalLong(data, "linkedCourseId"),
+                            data.optString("errorMessage", null)
+                    );
+                    mainHandler.post(() -> callback.onSuccess(result));
+                    return;
+                }
+                String message = root.optString("message", "주행 기록 상세 정보를 불러오지 못했습니다.");
+                mainHandler.post(() -> callback.onFailure(message));
+            } catch (Exception exception) {
+                mainHandler.post(() -> callback.onFailure("주행 기록 상세 정보를 불러오지 못했습니다. 서버 상태를 다시 확인해 주세요."));
             } finally {
                 if (connection != null) {
                     connection.disconnect();
@@ -147,5 +251,13 @@ public class HttpRideRecordGateway implements RideRecordGateway {
             }
         }
         return builder.toString();
+    }
+
+    private Long readOptionalLong(JSONObject source, String key) {
+        if (source == null || !source.has(key) || source.isNull(key)) {
+            return null;
+        }
+        long value = source.optLong(key, -1L);
+        return value > 0L ? value : null;
     }
 }
