@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import com.bikeprojectminji.bikefront.config.AppConfig
 import com.bikeprojectminji.bikefront.ridemap.CourseRoutePointsGateway
 import com.bikeprojectminji.bikefront.ridemap.HttpCourseRoutePointsGateway
@@ -77,6 +78,7 @@ fun GajaMapPreview(
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val gateway = remember { HttpCourseRoutePointsGateway() }
+    val authSessionStore = remember(context) { AuthSessionStore(context) }
     val mapView = rememberMapViewWithLifecycle(
         context = context,
         lifecycle = lifecycle,
@@ -116,7 +118,7 @@ fun GajaMapPreview(
             return@LaunchedEffect
         }
         routeState = RouteState.Loading
-        gateway.loadRoutePoints(courseId, object : CourseRoutePointsGateway.Callback {
+        gateway.loadRoutePoints(courseId, authSessionStore.accessToken, object : CourseRoutePointsGateway.Callback {
             override fun onSuccess(result: CourseRoutePointsGateway.RoutePointsResult) {
                 routeState = RouteState.Success(result.points)
                 MapPreviewRouteCallbackDispatcher.dispatchRoutePointsLoaded(

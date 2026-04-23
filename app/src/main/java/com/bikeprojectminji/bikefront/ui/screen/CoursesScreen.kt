@@ -79,7 +79,7 @@ fun CoursesScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = GajaColors.Background,
-        topBar = { GajaBrandTopBar(title = "Explore") },
+        topBar = { GajaBrandTopBar(title = "코스") },
     ) { scaffoldPadding ->
         PullToRefreshBox(
             state = pullToRefreshState,

@@ -54,4 +54,6 @@ public interface CourseRoutePointsGateway {
     }
 
     void loadRoutePoints(long courseId, Callback callback);
+
+    void loadRoutePoints(long courseId, String accessToken, Callback callback);
 }

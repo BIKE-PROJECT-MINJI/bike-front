@@ -53,7 +53,7 @@ fun FreeRidePreRideScreen(
                 .padding(horizontal = GajaSpacing.ScreenPadding),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            GajaBrandTopBar(title = "자유 주행", onProfileClick = {})
+            GajaBrandTopBar(title = "자유 주행")
 
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Surface(

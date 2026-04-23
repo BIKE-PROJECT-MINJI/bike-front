@@ -3,8 +3,10 @@ package com.bikeprojectminji.bikefront.ui.screen
 import android.util.Log
 
 import android.content.Context
+import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import com.bikeprojectminji.bikefront.config.AppConfig
 import com.bikeprojectminji.bikefront.course.RecordedCourseStore
+import com.bikeprojectminji.bikefront.course.RecordedCourseItem
 import com.bikeprojectminji.bikefront.home.FeaturedCourseApiClient
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -20,6 +22,7 @@ class CoursesRepository(
 ) {
 
     private val recordedCourseStore = RecordedCourseStore(context)
+    private val authSessionStore = AuthSessionStore(context)
 
     fun fetchFeaturedCourses(): List<CourseCardUiModel> {
         return featuredCourseApiClient.fetchFeaturedCourses().courses.map {
@@ -108,6 +111,7 @@ class CoursesRepository(
             connection.connectTimeout = AppConfig.CONNECT_TIMEOUT_MS
             connection.readTimeout = AppConfig.READ_TIMEOUT_MS
             connection.setRequestProperty("Accept", "application/json")
+            applyAuthorization(connection)
 
             val responseCode = connection.responseCode
             val inputStream = if (responseCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
@@ -147,17 +151,31 @@ class CoursesRepository(
     }
 
     private fun mergeRecordedCourses(items: List<CourseCardUiModel>): List<CourseCardUiModel> {
-        val recorded = recordedCourseStore.load().map {
-            CourseCardUiModel(
-                id = it.id,
-                title = it.title,
-                distanceKm = it.distanceKm,
-                estimatedDurationMin = it.estimatedDurationMin,
-                isRecorded = true,
-            )
+        return mergeRecordedCoursesWithCanonicalItems(items, recordedCourseStore.load())
+    }
+
+    private fun applyAuthorization(connection: HttpURLConnection) {
+        val accessToken = authSessionStore.accessToken
+        if (accessToken.isNotBlank()) {
+            connection.setRequestProperty("Authorization", "Bearer $accessToken")
         }
-        if (recorded.isEmpty()) return items
-        val existingIds = items.map { it.id }.toSet()
-        return recorded.filterNot { it.id in existingIds } + items
+    }
+}
+
+internal fun mergeRecordedCoursesWithCanonicalItems(
+    items: List<CourseCardUiModel>,
+    recordedItems: List<RecordedCourseItem>,
+): List<CourseCardUiModel> {
+    if (recordedItems.isEmpty()) {
+        return items
+    }
+
+    val recordedIds = recordedItems.map { it.id }.toSet()
+    return items.map { item ->
+        if (item.id in recordedIds) {
+            item.copy(isRecorded = true)
+        } else {
+            item
+        }
     }
 }

@@ -129,6 +129,7 @@ fun CoursePreRideScreen(
                             policyState = RidePolicyUiModel(
                                 "판단 보류",
                                 message,
+                                "",
                                 false,
                                 "",
                                 0,
@@ -152,6 +153,7 @@ fun CoursePreRideScreen(
                 policyState = RidePolicyUiModel(
                     "위치 권한 필요",
                     "현재 위치 권한을 허용하면 출발 가능 여부를 확인할 수 있습니다.",
+                    "",
                     false,
                     "",
                     0,
@@ -184,7 +186,7 @@ fun CoursePreRideScreen(
             .padding(horizontal = GajaSpacing.ScreenPadding, vertical = GajaSpacing.Small),
         verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing),
     ) {
-        GajaBrandTopBar(title = "경로 미리보기", onProfileClick = {})
+        GajaBrandTopBar(title = "경로 미리보기")
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -267,7 +269,11 @@ fun CoursePreRideScreen(
                 ) {
                     CourseMetricBlock(label = "거리", value = formatDistance(resolvedCourse.distanceKm), modifier = Modifier.weight(1f))
                     CourseMetricBlock(label = "예상 시간", value = "${resolvedCourse.estimatedDurationMin}분", modifier = Modifier.weight(1f))
-                    CourseMetricBlock(label = "경로", value = if (loading) "동기화" else "준비됨", modifier = Modifier.weight(1f))
+                    CourseMetricBlock(
+                        label = if (!policyState?.detailCaption.isNullOrBlank()) "시작점" else "경로",
+                        value = policyState?.detailCaption ?: if (loading) "동기화" else "준비됨",
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }
@@ -337,6 +343,14 @@ private fun CoursePreRidePreviewStatusCard(status: CoursePreRideStatusCardUiStat
                 style = MaterialTheme.typography.bodyMedium,
                 color = status.messageColor,
             )
+            status.detailCaption?.takeIf { it.isNotBlank() }?.let { detailCaption ->
+                Text(
+                    text = detailCaption,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = status.messageColor,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
     }
 }
@@ -373,6 +387,7 @@ private const val START_GATE_ELIGIBLE = "ELIGIBLE"
 private data class CoursePreRideStatusCardUiState(
     val title: String,
     val message: String,
+    val detailCaption: String? = null,
     val containerColor: Color,
     val titleColor: Color = GajaColors.TextPrimary,
     val messageColor: Color = GajaColors.TextSecondary,
@@ -419,6 +434,7 @@ private fun resolveCoursePreRideStatusCard(
         return CoursePreRideStatusCardUiState(
             title = policyState.stateLabel,
             message = policyState.message,
+            detailCaption = policyState.detailCaption,
             containerColor = containerColor,
         )
     }

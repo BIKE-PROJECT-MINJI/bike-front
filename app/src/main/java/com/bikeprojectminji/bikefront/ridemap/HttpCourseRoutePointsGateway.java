@@ -28,9 +28,14 @@ public class HttpCourseRoutePointsGateway implements CourseRoutePointsGateway {
 
     @Override
     public void loadRoutePoints(long courseId, Callback callback) {
+        loadRoutePoints(courseId, "", callback);
+    }
+
+    @Override
+    public void loadRoutePoints(long courseId, String accessToken, Callback callback) {
         executorService.execute(() -> {
             try {
-                RoutePointsResult result = requestRoutePoints(courseId);
+                RoutePointsResult result = requestRoutePoints(courseId, accessToken);
                 mainHandler.post(() -> callback.onSuccess(result));
             } catch (Exception exception) {
                 String message = exception.getMessage();
@@ -39,7 +44,7 @@ public class HttpCourseRoutePointsGateway implements CourseRoutePointsGateway {
         });
     }
 
-    private RoutePointsResult requestRoutePoints(long courseId) throws Exception {
+    private RoutePointsResult requestRoutePoints(long courseId, String accessToken) throws Exception {
         HttpURLConnection connection = null;
 
         try {
@@ -49,6 +54,9 @@ public class HttpCourseRoutePointsGateway implements CourseRoutePointsGateway {
             connection.setConnectTimeout(AppConfig.CONNECT_TIMEOUT_MS);
             connection.setReadTimeout(AppConfig.READ_TIMEOUT_MS);
             connection.setRequestProperty("Accept", "application/json");
+            if (accessToken != null && !accessToken.isBlank()) {
+                connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+            }
 
             int responseCode = connection.getResponseCode();
             InputStream inputStream = responseCode >= HttpURLConnection.HTTP_BAD_REQUEST
