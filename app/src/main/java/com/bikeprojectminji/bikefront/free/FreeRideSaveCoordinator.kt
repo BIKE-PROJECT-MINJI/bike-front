@@ -24,6 +24,8 @@ internal sealed class FreeRideSavePreparation {
 }
 
 internal object FreeRideSaveCoordinator {
+    private const val SHORT_RIDE_MIN_DURATION_SEC = 10
+
     fun prepare(
         accessToken: String,
         trackedPoints: List<RideRecordGateway.RideRecordPoint>,
@@ -54,6 +56,10 @@ internal object FreeRideSaveCoordinator {
             durationMinutes = (durationMillis / 60000L).toInt(),
             distanceKm = distanceMeters / 1000.0,
         )
+    }
+
+    fun isShortRideDuration(durationSec: Int): Boolean {
+        return durationSec < SHORT_RIDE_MIN_DURATION_SEC
     }
 
     fun createEditorIntent(

@@ -89,6 +89,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     var viewportActions by remember { mutableStateOf<MapViewportActions?>(null) }
     var inFlightSave by remember { mutableStateOf(false) }
     var pendingSaveAfterAuth by remember { mutableStateOf(false) }
+    var lastSavePreparation by remember { mutableStateOf<FreeRideSavePreparation.Ready?>(null) }
     var processingRideRecordId by remember { mutableStateOf<Long?>(null) }
     var processingRideRecordMessage by remember { mutableStateOf(context.getString(R.string.ride_finish_processing_message)) }
     var processingRideRecordFailed by remember { mutableStateOf(false) }
@@ -157,6 +158,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     }
 
     fun openCourseEditor(preparation: FreeRideSavePreparation.Ready, rideRecordId: Long) {
+        lastSavePreparation = null
         processingRideRecordId = null
         processingRideRecordFailed = false
         processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
@@ -275,6 +277,47 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         })
     }
 
+    fun retrySavePreparedDraft(preparation: FreeRideSavePreparation.Ready) {
+        inFlightSave = true
+        saveFailureState = FreeRideSaveFailureUiState.None
+        rideRecordGateway.saveRideRecord(preparation.accessToken, preparation.draft, object : RideRecordGateway.Callback {
+            override fun onSuccess(result: RideRecordGateway.RideRecordSaveResult) {
+                inFlightSave = false
+                processingRideRecordId = result.rideRecordId
+                processingRideRecordFailed = false
+                processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+                if (result.getFinalizationStatus() == "READY") {
+                    openCourseEditor(preparation, result.getRideRecordId())
+                } else {
+                    pollRideRecordFinalization(preparation, result.getRideRecordId())
+                }
+            }
+
+            override fun onFailure(message: String) {
+                inFlightSave = false
+                when (val failureState = FreeRideSaveFailureResolver.resolve(
+                    message = message,
+                    fallbackMessage = context.getString(R.string.ride_finish_processing_failed_message)
+                )) {
+                    is FreeRideSaveFailureUiState.ShortRide -> {
+                        processingRideRecordId = null
+                        processingRideRecordFailed = false
+                        processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
+                        saveFailureState = failureState
+                        lastSavePreparation = null
+                    }
+                    is FreeRideSaveFailureUiState.Generic -> {
+                        processingRideRecordId = -1L
+                        processingRideRecordFailed = true
+                        processingRideRecordMessage = failureState.message
+                        saveFailureState = FreeRideSaveFailureUiState.None
+                    }
+                    FreeRideSaveFailureUiState.None -> Unit
+                }
+            }
+        })
+    }
+
     fun saveAndOpenEditor() {
         val endedAtMillis = System.currentTimeMillis()
         when (val preparation = FreeRideSaveCoordinator.prepare(
@@ -292,6 +335,14 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                 }
             }
             is FreeRideSavePreparation.Ready -> {
+                if (FreeRideSaveCoordinator.isShortRideDuration(preparation.draft.durationSec)) {
+                    saveFailureState = FreeRideSaveFailureUiState.ShortRide(
+                        "주행 시작 후 10초 미만 기록은 저장되지 않습니다."
+                    )
+                    lastSavePreparation = null
+                    return
+                }
+                lastSavePreparation = preparation
                 inFlightSave = true
                 saveFailureState = FreeRideSaveFailureUiState.None
                 rideRecordGateway.saveRideRecord(preparation.accessToken, preparation.draft, object : RideRecordGateway.Callback {
@@ -314,6 +365,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                             fallbackMessage = context.getString(R.string.ride_finish_processing_failed_message)
                         )) {
                             is FreeRideSaveFailureUiState.ShortRide -> {
+                                lastSavePreparation = null
                                 processingRideRecordId = null
                                 processingRideRecordFailed = false
                                 processingRideRecordMessage = context.getString(R.string.ride_finish_processing_message)
@@ -344,20 +396,17 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     val tempValue = trackingController.weatherState.temperatureText.ifBlank { "--" }
     val policyLabel = trackingController.policyState?.stateLabel ?: "확인 중"
     val bannerMessage = sanitizeHudMessage(trackingController.policyState?.takeIf { it.isShowBanner && it.bannerMessage.isNotBlank() }?.bannerMessage)
-    val courseCompletionCheck = if (courseId == null) {
-        null
-    } else {
-        trackingController.courseCompletionCheck(routePoints)
-    }
+    val completionEligible = courseId != null && trackingController.policyState?.isCompletionEligible == true
+    val completionDialogMessage = trackingController.policyState?.completionDialogMessage
 
-    LaunchedEffect(courseId, courseCompletionCheck?.distanceMeters, courseCompletionCheck?.eligible, routePoints, inFlightSave, processingRideRecordId, saveFailureState) {
-        val shouldBlockCompletionDialog = courseId == null || routePoints.isEmpty() || inFlightSave || processingRideRecordId != null || saveFailureState !is FreeRideSaveFailureUiState.None
+    LaunchedEffect(courseId, completionEligible, completionDialogMessage, inFlightSave, processingRideRecordId, saveFailureState) {
+        val shouldBlockCompletionDialog = courseId == null || inFlightSave || processingRideRecordId != null || saveFailureState !is FreeRideSaveFailureUiState.None
         if (shouldBlockCompletionDialog) {
             showCourseCompletionDialog = false
             return@LaunchedEffect
         }
 
-        if (courseCompletionCheck?.eligible == true) {
+        if (completionEligible && !completionDialogMessage.isNullOrBlank()) {
             if (!courseCompletionDialogConsumed) {
                 showCourseCompletionDialog = true
             }
@@ -453,6 +502,10 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                             Button(onClick = { regenerateRideRecord() }) {
                                 Text(context.getString(R.string.ride_finish_processing_retry_button))
                             }
+                        } else if (lastSavePreparation != null) {
+                            Button(onClick = { retrySavePreparedDraft(lastSavePreparation!!) }) {
+                                Text("다시 저장")
+                            }
                         } else {
                             TextButton(onClick = {
                                 processingRideRecordId = null
@@ -479,9 +532,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                 title = { Text("코스 완주 안내") },
                 text = {
                     Text(
-                        courseCompletionCheck?.let {
-                            "${it.targetLabel} ${it.distanceMeters}m 이내에 들어왔습니다. 지금 기록을 저장하고 주행을 마칠까요?"
-                        } ?: "도착 지점 150m 이내에 들어왔습니다. 지금 기록을 저장하고 주행을 마칠까요?",
+                        completionDialogMessage ?: "완주 조건을 충족했습니다. 지금 기록을 저장하고 주행을 마칠까요?",
                     )
                 },
                 confirmButton = {

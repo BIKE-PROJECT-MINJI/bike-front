@@ -60,4 +60,14 @@ class FreeRideSaveCoordinatorTest {
         assertEquals(61, ready.draft.durationSec)
     }
 
+    @Test
+    fun `short ride duration under ten seconds is blocked before save request`() {
+        assertTrue(FreeRideSaveCoordinator.isShortRideDuration(9))
+    }
+
+    @Test
+    fun `ten second duration is not treated as short ride`() {
+        assertTrue(!FreeRideSaveCoordinator.isShortRideDuration(10))
+    }
+
 }
