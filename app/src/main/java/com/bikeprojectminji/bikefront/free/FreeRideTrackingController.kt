@@ -37,6 +37,17 @@ internal data class FreeRideLocationSample(
     val location: Location? = null,
 )
 
+private data class CourseCoordinate(
+    val latitude: Double,
+    val longitude: Double,
+)
+
+internal data class CourseCompletionCheckResult(
+    val targetLabel: String,
+    val distanceMeters: Int,
+    val eligible: Boolean,
+)
+
 internal class FreeRideTrackingController(
     startedAtElapsedRealtimeMillis: Long = SystemClock.elapsedRealtime(),
 ) {
@@ -60,6 +71,9 @@ internal class FreeRideTrackingController(
     private var lastPolicyRequestAt by mutableStateOf(0L)
     private var activeSegmentStartedAtElapsedRealtimeMillis = startedAtElapsedRealtimeMillis
     private var accumulatedActiveElapsedMillis = 0L
+    private var hasLeftLoopStartZone = false
+    private var activePolicyMatchQualitySatisfied = false
+    private var currentCoordinate: CourseCoordinate? = null
 
     val trackedPoints: List<RideRecordGateway.RideRecordPoint>
         get() = mutableTrackedPoints
@@ -84,6 +98,7 @@ internal class FreeRideTrackingController(
 
         previousLocation = if (sample.location != null) currentLocation else previousLocation
         currentLocation = sample.location ?: currentLocation
+        currentCoordinate = CourseCoordinate(sample.latitude, sample.longitude)
         mutableTrackedPoints.add(
             RideRecordGateway.RideRecordPoint(
                 mutableTrackedPoints.size + 1,
@@ -113,6 +128,7 @@ internal class FreeRideTrackingController(
         lastWeatherRequestAt = 0L
         lastPolicyRequestAt = 0L
         currentLocation = null
+        currentCoordinate = null
         previousLocation = null
         trackingStatus = FreeRideTrackingStatus.ACTIVE
     }
@@ -150,18 +166,102 @@ internal class FreeRideTrackingController(
         policyState = newState
     }
 
+    fun updateActivePolicyResult(
+        result: RidePolicyEvaluationGateway.EvaluationResult,
+        uiState: RidePolicyUiModel,
+    ) {
+        activePolicyMatchQualitySatisfied = isActivePolicyMatched(result)
+        policyState = uiState
+    }
+
+    fun updatePolicyFailure(newState: RidePolicyUiModel) {
+        activePolicyMatchQualitySatisfied = false
+        policyState = newState
+    }
+
     fun distanceToCourseDestinationMeters(routePoints: List<CourseRoutePointsGateway.RoutePoint>): Int? {
-        val location = currentLocation ?: return null
-        val destination = routePoints.maxByOrNull { it.pointOrder } ?: return null
-        val results = FloatArray(1)
-        Location.distanceBetween(
-            location.latitude,
-            location.longitude,
-            destination.latitude,
-            destination.longitude,
-            results,
+        val coordinate = currentCoordinate ?: return null
+        val destination = orderedRoutePoints(routePoints).lastOrNull() ?: return null
+        return distanceBetween(coordinate.latitude, coordinate.longitude, destination.latitude, destination.longitude)
+    }
+
+    fun courseCompletionCheck(routePoints: List<CourseRoutePointsGateway.RoutePoint>): CourseCompletionCheckResult? {
+        val coordinate = currentCoordinate ?: return null
+        val orderedRoutePoints = orderedRoutePoints(routePoints)
+        if (orderedRoutePoints.isEmpty()) {
+            return null
+        }
+
+        return if (isLoopCourse(orderedRoutePoints)) {
+            val startPoint = orderedRoutePoints.first()
+            val distanceToStart = distanceBetween(coordinate.latitude, coordinate.longitude, startPoint.latitude, startPoint.longitude)
+            if (distanceToStart > LOOP_START_EXIT_THRESHOLD_METERS) {
+                hasLeftLoopStartZone = true
+            }
+            CourseCompletionCheckResult(
+                targetLabel = "출발 지점",
+                distanceMeters = distanceToStart,
+                eligible = hasLeftLoopStartZone && activePolicyMatchQualitySatisfied && distanceToStart <= COURSE_COMPLETION_DIALOG_THRESHOLD_METERS,
+            )
+        } else {
+            hasLeftLoopStartZone = false
+            val destination = orderedRoutePoints.last()
+            val distanceToDestination = distanceBetween(coordinate.latitude, coordinate.longitude, destination.latitude, destination.longitude)
+            CourseCompletionCheckResult(
+                targetLabel = "도착 지점",
+                distanceMeters = distanceToDestination,
+                eligible = distanceToDestination <= COURSE_COMPLETION_DIALOG_THRESHOLD_METERS,
+            )
+        }
+    }
+
+    private fun isActivePolicyMatched(result: RidePolicyEvaluationGateway.EvaluationResult): Boolean {
+        val status = result.offRoute.status
+        val overallState = result.overallState
+        return overallState != "UNDETERMINED" && (status == "ON_ROUTE" || status == "WARNING")
+    }
+
+    private fun orderedRoutePoints(routePoints: List<CourseRoutePointsGateway.RoutePoint>): List<CourseRoutePointsGateway.RoutePoint> {
+        return routePoints.sortedBy { it.pointOrder }
+    }
+
+    private fun isLoopCourse(routePoints: List<CourseRoutePointsGateway.RoutePoint>): Boolean {
+        if (routePoints.size < 3) {
+            return false
+        }
+        val first = routePoints.first()
+        val last = routePoints.last()
+        return distanceBetween(first, last) <= LOOP_ROUTE_CLOSE_DISTANCE_METERS
+    }
+
+    private fun distanceBetween(
+        first: CourseRoutePointsGateway.RoutePoint,
+        second: CourseRoutePointsGateway.RoutePoint,
+    ): Int {
+        return distanceBetween(
+            first.latitude,
+            first.longitude,
+            second.latitude,
+            second.longitude,
         )
-        return results[0].toInt()
+    }
+
+    private fun distanceBetween(
+        startLatitude: Double,
+        startLongitude: Double,
+        endLatitude: Double,
+        endLongitude: Double,
+    ): Int {
+        val latitudeDelta = Math.toRadians(endLatitude - startLatitude)
+        val longitudeDelta = Math.toRadians(endLongitude - startLongitude)
+        val startLatitudeRadians = Math.toRadians(startLatitude)
+        val endLatitudeRadians = Math.toRadians(endLatitude)
+
+        val haversine = Math.sin(latitudeDelta / 2).let { it * it } +
+            Math.cos(startLatitudeRadians) * Math.cos(endLatitudeRadians) *
+            Math.sin(longitudeDelta / 2).let { it * it }
+        val angularDistance = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine))
+        return (EARTH_RADIUS_METERS * angularDistance).toInt()
     }
 }
 
@@ -198,7 +298,8 @@ internal fun rememberFreeRideTrackingState(
                         location = location,
                         ridePolicyGateway = ridePolicyGateway,
                         ridePolicyUiMapper = ridePolicyUiMapper,
-                        updateState = trackingController::updatePolicyState,
+                        updateState = trackingController::updateActivePolicyResult,
+                        updateFailureState = trackingController::updatePolicyFailure,
                     )
                 }
             }
@@ -260,15 +361,16 @@ private fun refreshRidePolicy(
     location: Location,
     ridePolicyGateway: RidePolicyEvaluationGateway,
     ridePolicyUiMapper: RidePolicyUiMapper,
-    updateState: (RidePolicyUiModel?) -> Unit,
+    updateState: (RidePolicyEvaluationGateway.EvaluationResult, RidePolicyUiModel) -> Unit,
+    updateFailureState: (RidePolicyUiModel) -> Unit,
 ) {
     ridePolicyGateway.evaluate(courseId, "ACTIVE", location, object : RidePolicyEvaluationGateway.Callback {
         override fun onSuccess(result: RidePolicyEvaluationGateway.EvaluationResult) {
-            updateState(ridePolicyUiMapper.map(result))
+            updateState(result, ridePolicyUiMapper.map(result))
         }
 
         override fun onFailure(message: String) {
-            updateState(RidePolicyUiModel("판단 보류", message, false, "", 0, 0, 0))
+            updateFailureState(RidePolicyUiModel("판단 보류", message, "", false, "", 0, 0, 0))
         }
     })
 }
@@ -277,3 +379,8 @@ private fun shouldRefresh(now: Long, lastRequestedAt: Long): Boolean {
     if (lastRequestedAt == 0L) return true
     return now - lastRequestedAt >= 5_000L
 }
+
+private const val LOOP_ROUTE_CLOSE_DISTANCE_METERS = 80
+private const val LOOP_START_EXIT_THRESHOLD_METERS = 250
+private const val COURSE_COMPLETION_DIALOG_THRESHOLD_METERS = 150
+private const val EARTH_RADIUS_METERS = 6_371_000.0

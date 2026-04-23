@@ -344,22 +344,20 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     val tempValue = trackingController.weatherState.temperatureText.ifBlank { "--" }
     val policyLabel = trackingController.policyState?.stateLabel ?: "확인 중"
     val bannerMessage = sanitizeHudMessage(trackingController.policyState?.takeIf { it.isShowBanner && it.bannerMessage.isNotBlank() }?.bannerMessage)
-    val destinationDistanceMeters = remember(courseId, currentLocation, routePoints) {
-        if (courseId == null) {
-            null
-        } else {
-            trackingController.distanceToCourseDestinationMeters(routePoints)
-        }
+    val courseCompletionCheck = if (courseId == null) {
+        null
+    } else {
+        trackingController.courseCompletionCheck(routePoints)
     }
 
-    LaunchedEffect(courseId, destinationDistanceMeters, routePoints, inFlightSave, processingRideRecordId, saveFailureState) {
+    LaunchedEffect(courseId, courseCompletionCheck?.distanceMeters, courseCompletionCheck?.eligible, routePoints, inFlightSave, processingRideRecordId, saveFailureState) {
         val shouldBlockCompletionDialog = courseId == null || routePoints.isEmpty() || inFlightSave || processingRideRecordId != null || saveFailureState !is FreeRideSaveFailureUiState.None
         if (shouldBlockCompletionDialog) {
             showCourseCompletionDialog = false
             return@LaunchedEffect
         }
 
-        if (destinationDistanceMeters != null && destinationDistanceMeters <= COURSE_COMPLETION_THRESHOLD_METERS) {
+        if (courseCompletionCheck?.eligible == true) {
             if (!courseCompletionDialogConsumed) {
                 showCourseCompletionDialog = true
             }
@@ -395,6 +393,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
                 .padding(top = 12.dp, start = 16.dp, end = 16.dp),
+            isTrackingActive = trackingController.isTrackingActive,
             locationText = locationState.value,
             policyText = policyLabel,
             bannerMessage = bannerMessage,
@@ -480,8 +479,8 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                 title = { Text("코스 완주 안내") },
                 text = {
                     Text(
-                        destinationDistanceMeters?.let {
-                            "도착 지점 ${it}m 이내에 들어왔습니다. 지금 기록을 저장하고 주행을 마칠까요?"
+                        courseCompletionCheck?.let {
+                            "${it.targetLabel} ${it.distanceMeters}m 이내에 들어왔습니다. 지금 기록을 저장하고 주행을 마칠까요?"
                         } ?: "도착 지점 150m 이내에 들어왔습니다. 지금 기록을 저장하고 주행을 마칠까요?",
                     )
                 },
@@ -525,11 +524,10 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     }
 }
 
-private const val COURSE_COMPLETION_THRESHOLD_METERS = 150
-
 @Composable
 fun RideHudTopBar(
     modifier: Modifier = Modifier,
+    isTrackingActive: Boolean,
     locationText: String,
     policyText: String,
     bannerMessage: String?,
@@ -548,7 +546,10 @@ fun RideHudTopBar(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RideStatusBadge(text = "LIVE", containerColor = GajaColors.Primary)
+                    RideStatusBadge(
+                        text = if (isTrackingActive) "LIVE" else "PAUSED",
+                        containerColor = if (isTrackingActive) GajaColors.Primary else GajaColors.Warning,
+                    )
                     RideStatusBadge(text = locationText, containerColor = GajaColors.Carbon.copy(alpha = 0.82f))
                     RideStatusBadge(text = policyText, containerColor = GajaColors.Carbon.copy(alpha = 0.82f))
                 }
@@ -673,6 +674,21 @@ fun RideControlDock(
     onStop: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (!isTrackingActive) {
+            Surface(
+                shape = CircleShape,
+                color = GajaColors.Warning.copy(alpha = 0.88f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.24f)),
+            ) {
+                Text(
+                    text = "일시정지됨",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = GajaColors.Carbon,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        }
         if (statusText.isNotBlank()) {
             Text(
                 text = statusText,
@@ -685,7 +701,7 @@ fun RideControlDock(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             HudControlButton(
                 icon = if (isTrackingActive) Icons.Default.Pause else Icons.Default.PlayArrow,
-                containerColor = GajaColors.Carbon.copy(alpha = 0.80f),
+                containerColor = if (isTrackingActive) GajaColors.Carbon.copy(alpha = 0.80f) else GajaColors.Primary,
                 onClick = onToggleTracking,
             )
             GajaPrimaryButton(
