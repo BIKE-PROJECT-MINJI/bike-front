@@ -10,6 +10,8 @@ public class RidePolicyUiModel {
     private final int stateTextColorResId;
     private final int bannerBackgroundColorResId;
     private final int bannerTextColorResId;
+    private final boolean completionEligible;
+    private final String completionDialogMessage;
 
     public RidePolicyUiModel(
             String stateLabel,
@@ -19,7 +21,9 @@ public class RidePolicyUiModel {
             String bannerMessage,
             int stateTextColorResId,
             int bannerBackgroundColorResId,
-            int bannerTextColorResId
+            int bannerTextColorResId,
+            boolean completionEligible,
+            String completionDialogMessage
     ) {
         this.stateLabel = stateLabel;
         this.message = message;
@@ -29,6 +33,8 @@ public class RidePolicyUiModel {
         this.stateTextColorResId = stateTextColorResId;
         this.bannerBackgroundColorResId = bannerBackgroundColorResId;
         this.bannerTextColorResId = bannerTextColorResId;
+        this.completionEligible = completionEligible;
+        this.completionDialogMessage = completionDialogMessage;
     }
 
     public String getStateLabel() {
@@ -61,5 +67,13 @@ public class RidePolicyUiModel {
 
     public int getBannerTextColorResId() {
         return bannerTextColorResId;
+    }
+
+    public boolean isCompletionEligible() {
+        return completionEligible;
+    }
+
+    public String getCompletionDialogMessage() {
+        return completionDialogMessage;
     }
 }

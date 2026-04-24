@@ -14,7 +14,8 @@ public class RidePolicyUiMapperTest {
         RidePolicyEvaluationGateway.EvaluationResult result = new RidePolicyEvaluationGateway.EvaluationResult(
                 "PRE_START",
                 new RidePolicyEvaluationGateway.GateResult("BLOCKED", "TOO_FAR_FROM_COURSE", 132d, 50d),
-                new RidePolicyEvaluationGateway.GateResult("UNDETERMINED", "UNKNOWN", Double.NaN, Double.NaN),
+                new RidePolicyEvaluationGateway.OffRouteResult("UNDETERMINED", "UNKNOWN", null, null, null, null, null),
+                new RidePolicyEvaluationGateway.CompletionResult("UNDETERMINED", "UNKNOWN", null, null, null, null, null, null),
                 "BLOCKED",
                 "경로 인근에서 시작해야 합니다."
         );

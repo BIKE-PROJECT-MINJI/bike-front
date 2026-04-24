@@ -6,6 +6,7 @@ import android.os.Looper;
 
 import com.bikeprojectminji.bikefront.config.AppConfig;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -18,6 +19,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -29,10 +31,10 @@ public class HttpRidePolicyEvaluationGateway implements RidePolicyEvaluationGate
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @Override
-    public void evaluate(long courseId, String phase, Location location, Callback callback) {
+    public void evaluate(long courseId, String phase, Location location, List<TraceLocation> trace, Callback callback) {
         executorService.execute(() -> {
             try {
-                EvaluationResult result = requestEvaluation(courseId, phase, location);
+                EvaluationResult result = requestEvaluation(courseId, phase, location, trace);
                 mainHandler.post(() -> callback.onSuccess(result));
             } catch (Exception exception) {
                 String message = exception.getMessage();
@@ -41,7 +43,7 @@ public class HttpRidePolicyEvaluationGateway implements RidePolicyEvaluationGate
         });
     }
 
-    private EvaluationResult requestEvaluation(long courseId, String phase, Location location) throws Exception {
+    private EvaluationResult requestEvaluation(long courseId, String phase, Location location, List<TraceLocation> trace) throws Exception {
         HttpURLConnection connection = null;
 
         try {
@@ -53,7 +55,7 @@ public class HttpRidePolicyEvaluationGateway implements RidePolicyEvaluationGate
             connection.setDoOutput(true);
             connection.setRequestProperty("Accept", "application/json");
             connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            connection.getOutputStream().write(buildRequestBody(phase, location).getBytes(StandardCharsets.UTF_8));
+            connection.getOutputStream().write(buildRequestBody(phase, location, trace).getBytes(StandardCharsets.UTF_8));
 
             int responseCode = connection.getResponseCode();
             InputStream inputStream = responseCode >= HttpURLConnection.HTTP_BAD_REQUEST
@@ -78,11 +80,13 @@ public class HttpRidePolicyEvaluationGateway implements RidePolicyEvaluationGate
 
             JSONObject startGate = data.optJSONObject("startGate");
             JSONObject offRoute = data.optJSONObject("offRoute");
+            JSONObject completion = data.optJSONObject("completion");
 
             return new EvaluationResult(
                     data.optString("phase", phase),
                     parseGate(startGate),
-                    parseGate(offRoute),
+                    parseOffRoute(offRoute),
+                    parseCompletion(completion),
                     data.optString("overallState", "UNDETERMINED"),
                     data.optString("defaultMessage", FALLBACK_ERROR_MESSAGE)
             );
@@ -93,23 +97,50 @@ public class HttpRidePolicyEvaluationGateway implements RidePolicyEvaluationGate
         }
     }
 
-    private String buildRequestBody(String phase, Location location) throws Exception {
+    private String buildRequestBody(String phase, Location location, List<TraceLocation> trace) throws Exception {
         JSONObject payload = new JSONObject();
-        JSONObject locationJson = new JSONObject();
 
         payload.put("phase", phase);
-        locationJson.put("lat", location.getLatitude());
-        locationJson.put("lon", location.getLongitude());
-        locationJson.put("accuracyM", location.hasAccuracy() ? location.getAccuracy() : 100d);
-        locationJson.put("capturedAt", toOffsetDateTime(location));
-        payload.put("location", locationJson);
+        payload.put(
+                "location",
+                buildLocationJson(
+                        location.getLatitude(),
+                        location.getLongitude(),
+                        location.hasAccuracy() ? location.getAccuracy() : 100d,
+                        location.getTime() > 0 ? location.getTime() : System.currentTimeMillis()
+                )
+        );
+
+        if ("ACTIVE".equals(phase) && trace != null && !trace.isEmpty()) {
+            JSONArray traceJson = new JSONArray();
+            for (TraceLocation traceLocation : trace) {
+                traceJson.put(
+                        buildLocationJson(
+                                traceLocation.getLatitude(),
+                                traceLocation.getLongitude(),
+                                traceLocation.getAccuracyM(),
+                                traceLocation.getCapturedAtMillis()
+                        )
+                );
+            }
+            payload.put("trace", traceJson);
+        }
 
         return payload.toString();
     }
 
-    private String toOffsetDateTime(Location location) {
-        long capturedAtMillis = location.getTime() > 0 ? location.getTime() : System.currentTimeMillis();
-        return OffsetDateTime.ofInstant(Instant.ofEpochMilli(capturedAtMillis), ZoneId.systemDefault())
+    private JSONObject buildLocationJson(double latitude, double longitude, double accuracyM, long capturedAtMillis) throws Exception {
+        JSONObject locationJson = new JSONObject();
+        locationJson.put("lat", latitude);
+        locationJson.put("lon", longitude);
+        locationJson.put("accuracyM", accuracyM);
+        locationJson.put("capturedAt", toOffsetDateTime(capturedAtMillis));
+        return locationJson;
+    }
+
+    private String toOffsetDateTime(long capturedAtMillis) {
+        long resolvedCapturedAtMillis = capturedAtMillis > 0 ? capturedAtMillis : System.currentTimeMillis();
+        return OffsetDateTime.ofInstant(Instant.ofEpochMilli(resolvedCapturedAtMillis), ZoneId.systemDefault())
                 .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
 
@@ -123,6 +154,39 @@ public class HttpRidePolicyEvaluationGateway implements RidePolicyEvaluationGate
                 gate.optString("reasonCode", "UNKNOWN_REASON"),
                 gate.has("distanceM") ? gate.optDouble("distanceM", Double.NaN) : Double.NaN,
                 gate.has("thresholdM") ? gate.optDouble("thresholdM", Double.NaN) : Double.NaN
+        );
+    }
+
+    private OffRouteResult parseOffRoute(JSONObject offRoute) {
+        if (offRoute == null) {
+            return new OffRouteResult("UNDETERMINED", "UNKNOWN_REASON", null, null, null, null, null);
+        }
+
+        return new OffRouteResult(
+                offRoute.optString("status", "UNDETERMINED"),
+                offRoute.optString("reasonCode", "UNKNOWN_REASON"),
+                offRoute.has("distanceM") ? offRoute.optInt("distanceM") : null,
+                offRoute.has("candidateThresholdM") ? offRoute.optInt("candidateThresholdM") : null,
+                offRoute.has("warningThresholdSec") ? offRoute.optInt("warningThresholdSec") : null,
+                offRoute.has("recoveryThresholdM") ? offRoute.optInt("recoveryThresholdM") : null,
+                offRoute.has("durationSec") ? offRoute.optInt("durationSec") : null
+        );
+    }
+
+    private CompletionResult parseCompletion(JSONObject completion) {
+        if (completion == null) {
+            return new CompletionResult("UNDETERMINED", "UNKNOWN_REASON", null, null, null, null, null, null);
+        }
+
+        return new CompletionResult(
+                completion.optString("status", "UNDETERMINED"),
+                completion.optString("reasonCode", "UNKNOWN_REASON"),
+                completion.has("coveragePercent") ? completion.optInt("coveragePercent") : null,
+                completion.has("coverageThresholdPercent") ? completion.optInt("coverageThresholdPercent") : null,
+                completion.has("loopCourse") ? completion.optBoolean("loopCourse") : null,
+                completion.has("leftStartZone") ? completion.optBoolean("leftStartZone") : null,
+                completion.has("distanceM") ? completion.optInt("distanceM") : null,
+                completion.has("thresholdM") ? completion.optInt("thresholdM") : null
         );
     }
 
