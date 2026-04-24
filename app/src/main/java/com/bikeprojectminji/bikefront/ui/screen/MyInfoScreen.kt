@@ -30,8 +30,11 @@ import androidx.compose.ui.unit.dp
 import com.bikeprojectminji.bikefront.auth.AuthLoginGateway
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import com.bikeprojectminji.bikefront.auth.HttpAuthLoginGateway
+import com.bikeprojectminji.bikefront.ui.theme.GajaCardTokens
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import com.bikeprojectminji.bikefront.ui.theme.GajaIconTokens
+import com.bikeprojectminji.bikefront.ui.theme.GajaIconSizes
+import com.bikeprojectminji.bikefront.ui.theme.GajaRadius
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -48,19 +51,21 @@ sealed class ProfileState {
 }
 
 val ProfileState.Loaded.totalDistance: String
-    get() = activitySummary?.formatTotalDistance() ?: "--"
+    get() = activitySummary?.let { "${formatGroupedOneDecimal(it.overallSummary.totalDistanceKm)} km" } ?: "--"
 
 val ProfileState.Loaded.totalElevation: String
-    get() = activitySummary?.formatTotalElevation() ?: "--"
+    get() = activitySummary?.let { "${it.overallSummary.totalElevationM.toInt()} m" } ?: "--"
 
 val ProfileState.Loaded.totalRides: String
-    get() = activitySummary?.formatTotalRides() ?: "--"
+    get() = activitySummary?.let { it.overallSummary.totalRides.toString() } ?: "--"
 
 val ProfileState.Loaded.avgSpeed: String
-    get() = activitySummary?.formatAvgSpeed() ?: "--"
+    get() = activitySummary?.let { "${formatOneDecimal(it.overallSummary.avgSpeedKmh)} km/h" } ?: "--"
 
 val ProfileState.Loaded.isWeeklySummaryEmpty: Boolean
-    get() = activitySummary?.isWeeklySummaryEmpty() == true
+    get() = activitySummary?.let {
+        it.weeklySummary.distanceKm <= 0.0 && it.weeklySummary.rideCount == 0L && it.weeklySummary.durationMinutes == 0L && it.weeklySummary.savedCourseCount == 0L
+    } == true
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +84,7 @@ fun MyInfoScreen(
 
     fun loadProfileState() {
         val displayName = authSessionStore.displayName.takeIf { it.isNotBlank() } ?: "라이더"
-        loadActivitySummary(authSessionStore, activitySummaryGateway) { result ->
+        requestMyInfoActivitySummary(authSessionStore, activitySummaryGateway) { result ->
             profileState = when (result) {
                 is ActivitySummaryLoadResult.Success -> ProfileState.Loaded(
                     displayName = displayName,
@@ -131,7 +136,7 @@ fun MyInfoScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = GajaSpacing.ScreenPadding),
-                verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)
+                verticalArrangement = Arrangement.spacedBy(GajaSpacing.SectionGap)
             ) {
                 Spacer(Modifier.height(GajaSpacing.Small))
 
@@ -174,18 +179,13 @@ fun NotLoggedInContent(onOpenProfile: () -> Unit) {
         
         Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
             listOf("주행 경로 저장 및 공유", "상세 주행 통계 분석", "나만의 코스 만들기", "라이딩 이력 관리").forEach { text ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(containerColor = GajaColors.White),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, GajaColors.Border)
-                ) {
+                GajaSectionCard(contentPadding = PaddingValues(GajaCardTokens.DefaultPadding)) {
                     Row(
-                        modifier = Modifier.padding(GajaSpacing.Medium),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small),
                     ) {
-                        Icon(GajaIconTokens.Success, contentDescription = null, tint = GajaColors.Primary, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(12.dp))
+                        Icon(GajaIconTokens.Success, contentDescription = null, tint = GajaColors.Primary, modifier = Modifier.size(GajaIconSizes.Medium))
                         Text(text, style = MaterialTheme.typography.bodyLarge, color = GajaColors.TextPrimary)
                     }
                 }
@@ -202,16 +202,8 @@ private fun ProfileContent(
     onOpenRideRecords: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            color = GajaColors.Surface,
-            border = BorderStroke(1.dp, GajaColors.Border),
-        ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
+        GajaSectionCard(contentPadding = PaddingValues(GajaCardTokens.ElevatedPadding)) {
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Medium),
@@ -226,39 +218,25 @@ private fun ProfileContent(
                         Text(state.displayName, style = MaterialTheme.typography.titleLarge, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
                         Text("라이딩 통계 대시보드", style = MaterialTheme.typography.bodySmall, color = GajaColors.TextSecondary)
                     }
-                    Surface(shape = RoundedCornerShape(999.dp), color = GajaColors.PrimaryContainer) {
-                        Text(
-                            text = "프로필",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = GajaColors.Primary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                    GajaStatusBadge(text = "프로필")
                 }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny),
                 ) {
-                    ProfileStatPill(label = "거리", value = state.totalDistance, modifier = Modifier.weight(1f))
-                    ProfileStatPill(label = "라이드", value = state.totalRides, modifier = Modifier.weight(1f))
-                    ProfileStatPill(label = "속도", value = state.avgSpeed, modifier = Modifier.weight(1f))
+                    GajaMetricCard(label = "거리", value = state.totalDistance, modifier = Modifier.weight(1f), emphasized = true)
+                    GajaMetricCard(label = "라이드", value = state.totalRides, modifier = Modifier.weight(1f))
+                    GajaMetricCard(label = "속도", value = state.avgSpeed, modifier = Modifier.weight(1f))
                 }
             }
         }
 
         SectionHeader(title = "종합 통계", subtitle = "전체 기록을 빠르게 훑을 수 있게 밀도를 높였어요")
         state.summaryErrorMessage?.let { message ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = GajaColors.White),
-                border = androidx.compose.foundation.BorderStroke(1.dp, GajaColors.Border)
-            ) {
+            GajaSectionCard {
                 Text(
                     text = message,
-                    modifier = Modifier.padding(GajaSpacing.Medium),
                     style = MaterialTheme.typography.bodyMedium,
                     color = GajaColors.TextSecondary,
                 )
@@ -272,11 +250,11 @@ private fun ProfileContent(
             )
         }
         
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            DashboardMetricCard("전체 거리", state.totalDistance, Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny)) {
+            DashboardMetricCard("전체 거리", state.totalDistance, Modifier.weight(1f), emphasized = true)
             DashboardMetricCard("획득 고도", state.totalElevation, Modifier.weight(1f))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny)) {
             DashboardMetricCard("주행 횟수", state.totalRides, Modifier.weight(1f))
             DashboardMetricCard("평균 속도", state.avgSpeed, Modifier.weight(1f))
         }
@@ -314,43 +292,15 @@ private fun DashboardMetricCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
+    emphasized: Boolean = false,
 ) {
-    Surface(
+    GajaMetricCard(
+        label = label,
+        value = value,
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = GajaColors.Surface,
-        border = BorderStroke(1.dp, GajaColors.Border),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary)
-            Text(value, style = MaterialTheme.typography.titleLarge, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-private fun ProfileStatPill(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = GajaColors.Background,
-        border = BorderStroke(1.dp, GajaColors.Border),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary)
-            Text(value, style = MaterialTheme.typography.titleMedium, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
-        }
-    }
+        emphasized = emphasized,
+        containerColor = GajaColors.Surface,
+    )
 }
 
 @Composable
@@ -376,28 +326,28 @@ private fun CompactShortcutRow(
                     Modifier
                 },
             ),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(GajaRadius.Small),
         color = if (pressed) GajaColors.PrimaryContainer else GajaColors.Surface,
         border = BorderStroke(1.dp, GajaColors.Border),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = GajaCardTokens.DefaultPadding, vertical = GajaSpacing.Small),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small),
         ) {
-            Surface(shape = RoundedCornerShape(12.dp), color = GajaColors.PrimaryContainer) {
+            Surface(shape = RoundedCornerShape(GajaRadius.Small), color = GajaColors.PrimaryContainer) {
                 Icon(
                     icon,
                     contentDescription = null,
                     tint = GajaColors.Primary,
-                    modifier = Modifier.padding(10.dp).size(18.dp),
+                    modifier = Modifier.padding(10.dp).size(GajaIconSizes.Medium),
                 )
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
                 Text(desc, style = MaterialTheme.typography.bodySmall, color = GajaColors.TextSecondary)
             }
-            Icon(GajaIconTokens.Direction, contentDescription = null, tint = GajaColors.TextTertiary, modifier = Modifier.size(18.dp))
+            Icon(GajaIconTokens.Direction, contentDescription = null, tint = GajaColors.TextTertiary, modifier = Modifier.size(GajaIconSizes.Medium))
         }
     }
 }
@@ -409,25 +359,54 @@ private fun ActivityRow(
     desc: String,
     onClick: (() -> Unit)? = null,
 ) {
-    Card(
+    GajaSectionCard(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = GajaColors.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, GajaColors.Border)
+        contentPadding = PaddingValues(GajaCardTokens.DefaultPadding),
     ) {
         Row(
-            modifier = Modifier.padding(GajaSpacing.Medium),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)
         ) {
-            Icon(icon, contentDescription = null, tint = GajaColors.Primary, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = null, tint = GajaColors.Primary, modifier = Modifier.size(GajaIconSizes.Large))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, color = GajaColors.TextPrimary)
                 Text(desc, style = MaterialTheme.typography.bodySmall, color = GajaColors.TextSecondary)
             }
-            Icon(GajaIconTokens.Direction, contentDescription = null, tint = GajaColors.TextTertiary, modifier = Modifier.size(20.dp))
+            Icon(GajaIconTokens.Direction, contentDescription = null, tint = GajaColors.TextTertiary, modifier = Modifier.size(GajaIconSizes.Medium))
         }
     }
 }
+
+private fun requestMyInfoActivitySummary(
+    authSessionStore: AuthSessionStore,
+    gateway: AuthLoginGateway,
+    onResult: (ActivitySummaryLoadResult) -> Unit,
+) {
+    if (!authSessionStore.isSignedIn) {
+        onResult(ActivitySummaryLoadResult.SignedOut)
+        return
+    }
+
+    val accessToken = authSessionStore.accessToken
+    if (accessToken.isBlank()) {
+        onResult(ActivitySummaryLoadResult.Failure("로그인 정보가 필요합니다."))
+        return
+    }
+
+    gateway.getMyActivitySummary(accessToken, object : AuthLoginGateway.ActivitySummaryCallback {
+        override fun onSuccess(result: AuthLoginGateway.ActivitySummaryResult) {
+            onResult(ActivitySummaryLoadResult.Success(result))
+        }
+
+        override fun onFailure(message: String) {
+            onResult(ActivitySummaryLoadResult.Failure(message.ifBlank { "활동 요약을 확인하지 못했습니다." }))
+        }
+    })
+}
+
+private fun formatOneDecimal(value: Double): String = String.format(java.util.Locale.US, "%.1f", value)
+
+private fun formatGroupedOneDecimal(value: Double): String = String.format(java.util.Locale.US, "%,.1f", value)

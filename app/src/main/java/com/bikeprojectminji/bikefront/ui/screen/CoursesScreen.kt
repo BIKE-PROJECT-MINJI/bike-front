@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -95,7 +96,7 @@ fun CoursesScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = GajaSpacing.ScreenPadding),
-                verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)
+                verticalArrangement = Arrangement.spacedBy(GajaSpacing.SectionGap)
             ) {
                 Spacer(Modifier.height(GajaSpacing.Small))
                 
@@ -136,26 +137,34 @@ fun CoursesScreen(
 
 @Composable
 private fun CourseTabSelector(selectedTab: CourseTab, onTabSelected: (CourseTab) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny)) {
         CourseTab.entries.forEach { tab ->
             val isSelected = selectedTab == tab
-            Card(
+            GajaSectionCard(
                 modifier = Modifier.weight(1f),
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) GajaColors.Primary else GajaColors.White
-                ),
-                onClick = { onTabSelected(tab) },
-                border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, GajaColors.Border)
+                containerColor = if (isSelected) GajaColors.Primary else GajaColors.White,
+                borderColor = if (isSelected) GajaColors.Primary else GajaColors.Border,
+                contentColor = if (isSelected) GajaColors.White else GajaColors.TextPrimary,
+                contentPadding = PaddingValues(horizontal = GajaSpacing.Small, vertical = GajaSpacing.Medium),
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(GajaSpacing.Medium),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 72.dp)
+                        .wrapContentHeight()
+                        .clickable { onTabSelected(tab) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(GajaSpacing.Micro),
                 ) {
                     Text(
                         text = tab.label,
                         style = MaterialTheme.typography.titleMedium,
                         color = if (isSelected) GajaColors.White else GajaColors.TextPrimary
+                    )
+                    Text(
+                        text = tab.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isSelected) GajaColors.White.copy(alpha = 0.82f) else GajaColors.TextSecondary,
                     )
                 }
             }

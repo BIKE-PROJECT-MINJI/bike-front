@@ -35,7 +35,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bikeprojectminji.bikefront.auth.AuthLoginGateway
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import com.bikeprojectminji.bikefront.auth.HttpAuthLoginGateway
+import com.bikeprojectminji.bikefront.ui.theme.GajaCardTokens
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
+import com.bikeprojectminji.bikefront.ui.theme.GajaControlTokens
+import com.bikeprojectminji.bikefront.ui.theme.GajaIconSizes
+import com.bikeprojectminji.bikefront.ui.theme.GajaRadius
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -77,7 +81,7 @@ fun RideStartScreen(
         if (featuredState !is SectionState.Success) featuredState = SectionState.Loading
         if (listState !is SectionState.Success) listState = SectionState.Loading
 
-        loadActivitySummary(authSessionStore, activitySummaryGateway) { result ->
+        requestRideStartActivitySummary(authSessionStore, activitySummaryGateway) { result ->
             activitySummaryState = when (result) {
                 is ActivitySummaryLoadResult.Success -> RideStartActivitySummaryState.from(result.summary)
                 ActivitySummaryLoadResult.SignedOut -> RideStartActivitySummaryState.fromSignedOut()
@@ -117,7 +121,7 @@ fun RideStartScreen(
                 .padding(innerPadding)
                 .padding(scaffoldPadding)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(GajaSpacing.SectionGap)
         ) {
             // 1. 요약 대시보드
             Box(modifier = Modifier.padding(horizontal = GajaSpacing.ScreenPadding)) {
@@ -142,7 +146,7 @@ fun RideStartScreen(
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
                         .padding(horizontal = GajaSpacing.ScreenPadding),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small)
                 ) {
                     when (val state = featuredState) {
                         is SectionState.Loading -> LoadingStateView("추천 코스를 불러오는 중")
@@ -151,7 +155,7 @@ fun RideStartScreen(
                                 FeaturedCourseGridItem(course = course, onClick = { onOpenCourse(course) })
                             }
                         }
-                        is SectionState.Error -> Text("데이터를 불러올 수 없습니다", modifier = Modifier.padding(16.dp))
+                        is SectionState.Error -> Text("데이터를 불러올 수 없습니다", modifier = Modifier.padding(GajaSpacing.Medium))
                     }
                 }
             }
@@ -185,12 +189,7 @@ fun RideStartScreen(
 
 @Composable
 fun ActivitySummaryDashboard(state: RideStartActivitySummaryState) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = GajaColors.Surface,
-        border = BorderStroke(1.dp, GajaColors.Border)
-    ) {
+    GajaSectionCard {
         when (state) {
             RideStartActivitySummaryState.Loading -> LoadingStateView("이번 주 기록을 불러오는 중")
             is RideStartActivitySummaryState.SignedOut -> SummaryMessageContent(
@@ -203,8 +202,7 @@ fun ActivitySummaryDashboard(state: RideStartActivitySummaryState) {
             )
             is RideStartActivitySummaryState.Ready -> {
                 Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -229,26 +227,18 @@ fun ActivitySummaryDashboard(state: RideStartActivitySummaryState) {
                             }
                         }
 
-                        Surface(shape = RoundedCornerShape(999.dp), color = GajaColors.PrimaryContainer) {
-                            Text(
-                                text = state.rideCountText,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = GajaColors.Primary,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
+                        GajaStatusBadge(text = state.rideCountText)
                     }
 
                     Text(state.helperText, style = MaterialTheme.typography.bodyMedium, color = GajaColors.TextSecondary)
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny),
                     ) {
-                        ActivityMetricBlock(label = "주행", value = state.rideCountText, icon = Icons.AutoMirrored.Filled.DirectionsBike, modifier = Modifier.weight(1f))
-                        ActivityMetricBlock(label = "시간", value = state.durationText, icon = Icons.Default.History, modifier = Modifier.weight(1f))
-                        ActivityMetricBlock(label = "코스", value = state.savedCourseText, icon = Icons.Default.Map, modifier = Modifier.weight(1f))
+                        GajaMetricCard(label = "주행", value = state.rideCountText, icon = Icons.AutoMirrored.Filled.DirectionsBike, modifier = Modifier.weight(1f), emphasized = true)
+                        GajaMetricCard(label = "시간", value = state.durationText, icon = Icons.Default.History, modifier = Modifier.weight(1f))
+                        GajaMetricCard(label = "코스", value = state.savedCourseText, icon = Icons.Default.Map, modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -258,43 +248,9 @@ fun ActivitySummaryDashboard(state: RideStartActivitySummaryState) {
 
 @Composable
 private fun SummaryMessageContent(title: String, message: String) {
-    Column(modifier = Modifier.padding(20.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny)) {
         Text(title, style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary)
-        Spacer(Modifier.height(8.dp))
         Text(message, style = MaterialTheme.typography.bodyLarge, color = GajaColors.TextPrimary, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
-private fun ActivityMetricBlock(
-    label: String,
-    value: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = GajaColors.Background,
-        border = BorderStroke(1.dp, GajaColors.Border),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Icon(icon, contentDescription = null, tint = GajaColors.Primary, modifier = Modifier.size(14.dp))
-                Text(label, style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary)
-            }
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = GajaColors.TextPrimary,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                textAlign = TextAlign.Start,
-            )
-        }
     }
 }
 
@@ -302,15 +258,13 @@ private fun ActivityMetricBlock(
 private fun CompactFreeRidePanel(
     onStartFreeRide: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = GajaColors.Carbon,
-        border = BorderStroke(1.dp, GajaColors.White.copy(alpha = 0.05f)),
+    GajaSectionCard(
+        containerColor = GajaColors.Carbon,
+        borderColor = GajaColors.White.copy(alpha = 0.05f),
+        contentPadding = PaddingValues(GajaCardTokens.ElevatedPadding),
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -319,17 +273,13 @@ private fun CompactFreeRidePanel(
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(GajaSpacing.Micro),
                 ) {
-                    Surface(shape = RoundedCornerShape(999.dp), color = GajaColors.Primary.copy(alpha = 0.16f)) {
-                        Text(
-                            text = "자유 주행",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = GajaColors.Primary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                    GajaStatusBadge(
+                        text = "자유 주행",
+                        containerColor = GajaColors.Primary.copy(alpha = 0.16f),
+                        contentColor = GajaColors.Primary,
+                    )
                     Text(
                         text = "코스 없이 바로 출발",
                         style = MaterialTheme.typography.titleLarge,
@@ -347,13 +297,13 @@ private fun CompactFreeRidePanel(
                     imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
                     contentDescription = null,
                     tint = GajaColors.White.copy(alpha = 0.78f),
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(GajaIconSizes.Control),
                 )
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny),
             ) {
                 CompactStatusPill(text = "즉시 시작", modifier = Modifier.weight(1f))
                 CompactStatusPill(text = "기록 저장", modifier = Modifier.weight(1f))
@@ -374,41 +324,28 @@ private fun CompactStatusPill(
     text: String,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    GajaInfoPill(
+        text = text,
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = GajaColors.White.copy(alpha = 0.08f),
-        border = BorderStroke(1.dp, GajaColors.White.copy(alpha = 0.06f)),
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = GajaColors.White.copy(alpha = 0.84f),
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-        )
-    }
+        containerColor = GajaColors.White.copy(alpha = 0.08f),
+        contentColor = GajaColors.White.copy(alpha = 0.84f),
+    )
 }
 
 @Composable
 fun FeaturedCourseGridItem(course: CourseCardUiModel, onClick: () -> Unit) {
-    Surface(
+    GajaSectionCard(
         modifier = Modifier
             .width(214.dp)
-            .height(142.dp)
+            .height(152.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        color = GajaColors.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, GajaColors.Border),
-        shadowElevation = 1.dp
+        contentPadding = PaddingValues(GajaCardTokens.DefaultPadding),
+        shadowElevation = GajaCardTokens.SubtleElevation,
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             Column {
-                Surface(color = GajaColors.PrimaryContainer, shape = RoundedCornerShape(999.dp)) {
-                    Text("많이 찾는 코스", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = GajaColors.Primary, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(10.dp))
+                GajaStatusBadge(text = "많이 찾는 코스")
+                Spacer(Modifier.height(GajaSpacing.Tiny))
                 Text(course.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 Text(
                     text = "탭해서 코스 미리보기",
@@ -424,7 +361,7 @@ fun FeaturedCourseGridItem(course: CourseCardUiModel, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny)) {
                     FeaturedCourseMeta(Icons.Default.Map, "${course.distanceKm}km")
                     FeaturedCourseMeta(Icons.Default.History, "${course.estimatedDurationMin}분")
                 }
@@ -432,7 +369,7 @@ fun FeaturedCourseGridItem(course: CourseCardUiModel, onClick: () -> Unit) {
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
                     tint = GajaColors.TextTertiary,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(GajaIconSizes.Medium),
                 )
             }
         }
@@ -441,17 +378,38 @@ fun FeaturedCourseGridItem(course: CourseCardUiModel, onClick: () -> Unit) {
 
 @Composable
 private fun FeaturedCourseMeta(icon: ImageVector, text: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Icon(icon, contentDescription = null, tint = GajaColors.TextSecondary, modifier = Modifier.size(14.dp))
-        Text(text, style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary, fontWeight = FontWeight.Medium)
-    }
+    GajaInfoPill(text = text, icon = icon)
 }
 
 private sealed interface SectionState<out T> {
     data object Loading : SectionState<Nothing>
     data class Success<T>(val data: T) : SectionState<T>
     data class Error(val message: String) : SectionState<Nothing>
+}
+
+private fun requestRideStartActivitySummary(
+    authSessionStore: AuthSessionStore,
+    gateway: AuthLoginGateway,
+    onResult: (ActivitySummaryLoadResult) -> Unit,
+) {
+    if (!authSessionStore.isSignedIn) {
+        onResult(ActivitySummaryLoadResult.SignedOut)
+        return
+    }
+
+    val accessToken = authSessionStore.accessToken
+    if (accessToken.isBlank()) {
+        onResult(ActivitySummaryLoadResult.Failure("로그인 정보가 필요합니다."))
+        return
+    }
+
+    gateway.getMyActivitySummary(accessToken, object : AuthLoginGateway.ActivitySummaryCallback {
+        override fun onSuccess(result: AuthLoginGateway.ActivitySummaryResult) {
+            onResult(ActivitySummaryLoadResult.Success(result))
+        }
+
+        override fun onFailure(message: String) {
+            onResult(ActivitySummaryLoadResult.Failure(message.ifBlank { "활동 요약을 확인하지 못했습니다." }))
+        }
+    })
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -39,7 +40,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import com.bikeprojectminji.bikefront.ride.HttpRideRecordGateway
 import com.bikeprojectminji.bikefront.ride.RideRecordGateway
+import com.bikeprojectminji.bikefront.ui.theme.GajaCardTokens
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
+import com.bikeprojectminji.bikefront.ui.theme.GajaRadius
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.time.OffsetDateTime
@@ -195,19 +198,17 @@ private fun RideRecordCard(
     onOpenCourse: (Long) -> Unit,
 ) {
     val statusUi = remember(item.finalizationStatus) { rideRecordStatusUi(item.finalizationStatus) }
-    Surface(
+    GajaSectionCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle),
-        shape = MaterialTheme.shapes.large,
-        color = GajaColors.Surface,
-        border = BorderStroke(1.dp, if (isExpanded) GajaColors.Primary.copy(alpha = 0.45f) else GajaColors.Border),
+        shape = RoundedCornerShape(GajaRadius.Large),
+        containerColor = GajaColors.Surface,
+        borderColor = if (isExpanded) GajaColors.Primary.copy(alpha = 0.45f) else GajaColors.Border,
         shadowElevation = if (isExpanded) 4.dp else 0.dp,
+        contentPadding = PaddingValues(GajaCardTokens.DefaultPadding),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -229,19 +230,7 @@ private fun RideRecordCard(
                         color = GajaColors.TextSecondary,
                     )
                 }
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = statusUi.containerColor,
-                    border = BorderStroke(1.dp, statusUi.contentColor.copy(alpha = 0.18f)),
-                ) {
-                    Text(
-                        text = statusUi.label,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = statusUi.contentColor,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                GajaStatusBadge(text = statusUi.label, containerColor = statusUi.containerColor, contentColor = statusUi.contentColor)
             }
 
             Text(
@@ -279,16 +268,16 @@ private fun RideRecordExpandedDetail(
         }
         is RideRecordDetailLoadState.Success -> {
             val detail = detailState.detail
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny)) {
                     RideRecordMetricCard("raw", detail.rawPointCount.toString(), Modifier.weight(1f))
                     RideRecordMetricCard("processed", detail.processedPointCount.toString(), Modifier.weight(1f))
                 }
 
                 BikeSurfaceCard {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.padding(GajaCardTokens.DefaultPadding),
+                        verticalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny),
                     ) {
                         Text(
                             text = detailStatusSummary(detail),
@@ -332,25 +321,7 @@ private fun RideRecordExpandedDetail(
 
 @Composable
 private fun RideRecordMetricCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
-        color = GajaColors.Surface,
-        border = BorderStroke(1.dp, GajaColors.Border),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(text = label, style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary)
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = GajaColors.TextPrimary,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
+    GajaMetricCard(label = label, value = value, modifier = modifier)
 }
 
 private suspend fun fetchRideRecords(
