@@ -431,11 +431,10 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     }
 
     fun requestExit() {
-        if (hasMeaningfulUnsavedRideProgress()) {
-            showUnsavedExitDialog = true
+        if (inFlightSave || processingRideRecordId != null) {
             return
         }
-        onFinish()
+        showUnsavedExitDialog = true
     }
 
     BackHandler {
