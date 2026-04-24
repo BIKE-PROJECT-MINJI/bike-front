@@ -107,7 +107,7 @@ cmd.exe /c gradlew.bat test
 ## API base URL
 
 - debug 기본값: `http://10.0.2.2:8080`
-- 현재 배포 backend 기준 base URL: `http://3.35.168.38`
+- 현재 배포 backend 기준 base URL: `https://api.gajabike.shop`
 - release URL은 환경에 따라 gradle property로 덮어씁니다.
 - 필요 시 gradle property로 덮어쓸 수 있습니다.
 
