@@ -296,6 +296,7 @@ internal fun rememberFreeRideTrackingState(
                     refreshRidePolicy(
                         courseId = courseId,
                         location = location,
+                        trackedPoints = trackingController.trackedPoints,
                         ridePolicyGateway = ridePolicyGateway,
                         ridePolicyUiMapper = ridePolicyUiMapper,
                         updateState = trackingController::updateActivePolicyResult,
@@ -315,7 +316,7 @@ internal fun rememberFreeRideTrackingState(
     return trackingController
 }
 
-private fun refreshWeather(
+internal fun refreshWeather(
     location: Location,
     weatherGateway: CurrentWeatherGateway,
     updateState: (WeatherUiState) -> Unit,
@@ -356,23 +357,62 @@ private fun refreshWeather(
     })
 }
 
-private fun refreshRidePolicy(
+internal fun refreshRidePolicy(
     courseId: Long,
     location: Location,
+    trackedPoints: List<RideRecordGateway.RideRecordPoint>,
     ridePolicyGateway: RidePolicyEvaluationGateway,
     ridePolicyUiMapper: RidePolicyUiMapper,
     updateState: (RidePolicyEvaluationGateway.EvaluationResult, RidePolicyUiModel) -> Unit,
     updateFailureState: (RidePolicyUiModel) -> Unit,
 ) {
-    ridePolicyGateway.evaluate(courseId, "ACTIVE", location, object : RidePolicyEvaluationGateway.Callback {
+    ridePolicyGateway.evaluate(
+        courseId,
+        "ACTIVE",
+        location,
+        buildActiveTraceLocations(trackedPoints, location),
+        object : RidePolicyEvaluationGateway.Callback {
         override fun onSuccess(result: RidePolicyEvaluationGateway.EvaluationResult) {
             updateState(result, ridePolicyUiMapper.map(result))
         }
 
         override fun onFailure(message: String) {
-            updateFailureState(RidePolicyUiModel("판단 보류", message, "", false, "", 0, 0, 0))
+            updateFailureState(RidePolicyUiModel("판단 보류", message, "", false, "", 0, 0, 0, false, ""))
         }
     })
+}
+
+internal fun buildActiveTraceLocations(
+    trackedPoints: List<RideRecordGateway.RideRecordPoint>,
+    currentLocation: Location,
+): List<RidePolicyEvaluationGateway.TraceLocation> {
+    val resolvedAccuracy = if (currentLocation.hasAccuracy()) currentLocation.accuracy.toDouble() else 100.0
+    val resolvedCapturedAtMillis = currentLocation.time.takeIf { it > 0L } ?: System.currentTimeMillis()
+    return buildActiveTraceLocations(trackedPoints, resolvedAccuracy, resolvedCapturedAtMillis)
+}
+
+internal fun buildActiveTraceLocations(
+    trackedPoints: List<RideRecordGateway.RideRecordPoint>,
+    accuracyM: Double,
+    capturedAtMillis: Long,
+): List<RidePolicyEvaluationGateway.TraceLocation> {
+    if (trackedPoints.isEmpty()) {
+        return emptyList()
+    }
+
+    val backfillWindowMillis = ((trackedPoints.size - 1).toLong() * ACTIVE_TRACE_POINT_INTERVAL_MILLIS)
+        .coerceAtMost(capturedAtMillis - 1L)
+        .coerceAtLeast(0L)
+    val firstCapturedAtMillis = (capturedAtMillis - backfillWindowMillis).coerceAtLeast(1L)
+
+    return trackedPoints.mapIndexed { index, trackedPoint ->
+        RidePolicyEvaluationGateway.TraceLocation(
+            trackedPoint.latitude,
+            trackedPoint.longitude,
+            accuracyM,
+            firstCapturedAtMillis + (index * ACTIVE_TRACE_POINT_INTERVAL_MILLIS),
+        )
+    }
 }
 
 private fun shouldRefresh(now: Long, lastRequestedAt: Long): Boolean {
@@ -384,3 +424,4 @@ private const val LOOP_ROUTE_CLOSE_DISTANCE_METERS = 80
 private const val LOOP_START_EXIT_THRESHOLD_METERS = 250
 private const val COURSE_COMPLETION_DIALOG_THRESHOLD_METERS = 150
 private const val EARTH_RADIUS_METERS = 6_371_000.0
+private const val ACTIVE_TRACE_POINT_INTERVAL_MILLIS = 1_000L

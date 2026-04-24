@@ -3,10 +3,12 @@ package com.bikeprojectminji.bikefront.free
 import android.Manifest
 import android.app.Activity
 import android.content.Context
+import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -14,6 +16,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -34,6 +37,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,11 +54,12 @@ import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyUiMapper
 import com.bikeprojectminji.bikefront.speed.RideSpeedFormatter
 import com.bikeprojectminji.bikefront.speed.RideSpeedUiState
 import com.bikeprojectminji.bikefront.ui.screen.GajaMapPreview
-import com.bikeprojectminji.bikefront.ui.screen.GajaPrimaryButton
 import com.bikeprojectminji.bikefront.ui.screen.MapDisplayMode
 import com.bikeprojectminji.bikefront.ui.screen.MapViewportActions
-import com.bikeprojectminji.bikefront.ui.screen.SecondaryActionButton
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
+import com.bikeprojectminji.bikefront.ui.theme.GajaHudTokens
+import com.bikeprojectminji.bikefront.ui.theme.GajaIconSizes
+import com.bikeprojectminji.bikefront.ui.theme.GajaIconTokens
 import com.bikeprojectminji.bikefront.ui.theme.GajaTheme
 import com.bikeprojectminji.bikefront.weather.HttpCurrentWeatherGateway
 
@@ -94,6 +99,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     var processingRideRecordMessage by remember { mutableStateOf(context.getString(R.string.ride_finish_processing_message)) }
     var processingRideRecordFailed by remember { mutableStateOf(false) }
     var saveFailureState by remember { mutableStateOf<FreeRideSaveFailureUiState>(FreeRideSaveFailureUiState.None) }
+    var showUnsavedExitDialog by remember { mutableStateOf(false) }
     var showCourseCompletionDialog by remember(courseId) { mutableStateOf(false) }
     var courseCompletionDialogConsumed by remember(courseId) { mutableStateOf(false) }
     val startedAtMillis = remember { System.currentTimeMillis() }
@@ -112,14 +118,46 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         if (!locationGranted) permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
-    val trackingController = rememberFreeRideTrackingState(
-        courseId = courseId,
-        locationGranted = locationGranted,
-        locationManager = locationManager,
-        weatherGateway = weatherGateway,
-        ridePolicyGateway = ridePolicyGateway,
-        ridePolicyUiMapper = ridePolicyUiMapper,
-    )
+    val trackingController = remember { FreeRideTrackingController() }
+
+    DisposableEffect(locationGranted, courseId, locationManager) {
+        if (!locationGranted || locationManager == null) {
+            onDispose { }
+        } else {
+            val listener = LocationListener { location ->
+                val accepted = trackingController.onLocationChanged(location)
+                if (!accepted) {
+                    return@LocationListener
+                }
+
+                val now = SystemClock.elapsedRealtime()
+                if (trackingController.shouldRefreshWeather(now)) {
+                    trackingController.markWeatherRequested(now)
+                    refreshWeather(location, weatherGateway, trackingController::updateWeatherState)
+                }
+                if (courseId != null && trackingController.shouldRefreshPolicy(now)) {
+                    trackingController.markPolicyRequested(now)
+                    refreshRidePolicy(
+                        courseId = courseId,
+                        location = location,
+                        trackedPoints = trackingController.trackedPoints,
+                        ridePolicyGateway = ridePolicyGateway,
+                        ridePolicyUiMapper = ridePolicyUiMapper,
+                        updateState = trackingController::updateActivePolicyResult,
+                        updateFailureState = trackingController::updatePolicyFailure,
+                    )
+                }
+            }
+
+            try {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 5f, listener)
+                locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let { listener.onLocationChanged(it) }
+            } catch (_: SecurityException) {
+            }
+
+            onDispose { locationManager.removeUpdates(listener) }
+        }
+    }
 
     val currentLocation = trackingController.currentLocation
     val previousLocation = trackingController.previousLocation
@@ -385,6 +423,24 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         }
     }
 
+    fun hasMeaningfulUnsavedRideProgress(): Boolean {
+        val trackedPoints = trackingController.trackedPoints
+        if (trackedPoints.isEmpty()) {
+            return false
+        }
+
+        val activeDurationSec = (trackingController.activeElapsedMillis() / 1000L).toInt()
+        return !FreeRideSaveCoordinator.isShortRideDuration(activeDurationSec)
+    }
+
+    fun requestExit() {
+        if (hasMeaningfulUnsavedRideProgress()) {
+            showUnsavedExitDialog = true
+            return
+        }
+        onFinish()
+    }
+
     LaunchedEffect(pendingSaveAfterAuth, inFlightSave) {
         if (pendingSaveAfterAuth && !inFlightSave) {
             pendingSaveAfterAuth = false
@@ -392,13 +448,23 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         }
     }
 
-    val windValue = trackingController.weatherState.windText.ifBlank { "--" }
+    val currentPolicyState = trackingController.policyState
     val tempValue = trackingController.weatherState.temperatureText.ifBlank { "--" }
-    val policyLabel = trackingController.policyState?.stateLabel ?: "확인 중"
-    val bannerMessage = sanitizeHudMessage(trackingController.policyState?.takeIf { it.isShowBanner && it.bannerMessage.isNotBlank() }?.bannerMessage)
-    val completionEligible = courseId != null && trackingController.policyState?.isCompletionEligible == true
-    val completionDialogMessage = trackingController.policyState?.completionDialogMessage
-
+    val policyLabel = currentPolicyState?.stateLabel ?: "확인 중"
+    val completionEligible = courseId != null && currentPolicyState?.isCompletionEligible == true
+    val completionDialogMessage = currentPolicyState?.completionDialogMessage
+    val distanceText = remember(distanceMeters) { formatHudDistance(distanceMeters) }
+    val activeElapsedMillis = trackingController.activeElapsedMillis()
+    val elapsedText = remember(activeElapsedMillis) {
+        formatHudDuration(activeElapsedMillis)
+    }
+    val isLocationHealthy = locationGranted && currentLocation != null && (!currentLocation.hasAccuracy() || currentLocation.accuracy <= 50f)
+    val compactLocationText = remember(locationState.value) {
+        compactHudText(locationState.value, fallback = "위치 확인 중")
+    }
+    val compactPolicyText = remember(policyLabel) {
+        compactHudText(policyLabel, fallback = "정책 확인 중")
+    }
     LaunchedEffect(courseId, completionEligible, completionDialogMessage, inFlightSave, processingRideRecordId, saveFailureState) {
         val shouldBlockCompletionDialog = courseId == null || inFlightSave || processingRideRecordId != null || saveFailureState !is FreeRideSaveFailureUiState.None
         if (shouldBlockCompletionDialog) {
@@ -415,7 +481,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(GajaColors.Carbon)) {
         GajaMapPreview(
             modifier = Modifier.fillMaxSize(),
             courseId = courseId,
@@ -427,51 +493,66 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(GajaColors.Background.copy(alpha = 0.14f))
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.36f),
+                        0f to GajaColors.Carbon.copy(alpha = 0.36f),
                         0.18f to Color.Transparent,
-                        0.76f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = 0.42f),
+                        0.64f to Color.Transparent,
+                        1f to GajaColors.Carbon.copy(alpha = 0.28f),
                     )
                 )
         )
-
-        RideHudTopBar(
+        Column(
             modifier = Modifier
-                .align(Alignment.TopCenter)
+                .fillMaxSize()
                 .statusBarsPadding()
-                .padding(top = 12.dp, start = 16.dp, end = 16.dp),
-            isTrackingActive = trackingController.isTrackingActive,
-            locationText = locationState.value,
-            policyText = policyLabel,
-            bannerMessage = bannerMessage,
-            tempValue = tempValue,
-            windValue = windValue,
-            onClose = onFinish,
-            onRecenter = { viewportActions?.recenter?.invoke() },
-            onZoomIn = { viewportActions?.zoomIn?.invoke() },
-            onZoomOut = { viewportActions?.zoomOut?.invoke() },
-        )
-
-        PrimaryRideMetric(
-            value = speedState.speedText.removeSuffix("km/h"),
-            unit = "km/h",
-            distanceText = "",
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(top = 88.dp),
-        )
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 20.dp)
+                .padding(horizontal = GajaHudTokens.OverlayMargin, vertical = 12.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    RideSecondaryInfoCard(
+                        modifier = Modifier.weight(1f),
+                        locationText = compactLocationText,
+                        policyText = compactPolicyText,
+                        distanceText = distanceText,
+                        temperatureText = tempValue,
+                    )
+                    RideHudTopBar(
+                        modifier = Modifier.padding(start = 16.dp),
+                        onClose = ::requestExit,
+                        onRecenter = { viewportActions?.recenter?.invoke() },
+                        onZoomIn = { viewportActions?.zoomIn?.invoke() },
+                        onZoomOut = { viewportActions?.zoomOut?.invoke() },
+                    )
+                }
+                PrimaryRideMetric(
+                    modifier = Modifier.padding(top = 12.dp),
+                    value = speedState.speedText.removeSuffix("km/h").ifBlank { "--" },
+                    unit = "km/h",
+                    footerText = if (trackingController.isTrackingActive) "실시간 속도" else "주행 일시정지",
+                )
+            }
+
             RideControlDock(
                 statusText = statusMessage,
+                elapsedText = elapsedText,
+                isLocationHealthy = isLocationHealthy,
                 inFlightSave = inFlightSave,
                 isTrackingActive = trackingController.isTrackingActive,
                 onToggleTracking = {
@@ -482,7 +563,7 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                     }
                 },
                 onSave = { if (!inFlightSave) saveAndOpenEditor() },
-                onStop = onFinish,
+                onStop = ::requestExit,
             )
         }
 
@@ -556,6 +637,38 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
                 },
             )
         }
+        if (showUnsavedExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showUnsavedExitDialog = false },
+                title = { Text("저장하지 않고 종료할까요?") },
+                text = {
+                    Text("지금 종료하면 이번 주행 기록은 저장되지 않습니다. 저장 후 이어서 정리하거나, 저장 없이 종료할 수 있습니다.")
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        showUnsavedExitDialog = false
+                        if (!inFlightSave) {
+                            saveAndOpenEditor()
+                        }
+                    }) {
+                        Text("저장하기")
+                    }
+                },
+                dismissButton = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = {
+                            showUnsavedExitDialog = false
+                            onFinish()
+                        }) {
+                            Text("저장 없이 종료")
+                        }
+                        TextButton(onClick = { showUnsavedExitDialog = false }) {
+                            Text("취소")
+                        }
+                    }
+                },
+            )
+        }
         if (saveFailureState is FreeRideSaveFailureUiState.ShortRide) {
             val shortRideState = saveFailureState as FreeRideSaveFailureUiState.ShortRide
             AlertDialog(
@@ -578,76 +691,430 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
 @Composable
 fun RideHudTopBar(
     modifier: Modifier = Modifier,
-    isTrackingActive: Boolean,
-    locationText: String,
-    policyText: String,
-    bannerMessage: String?,
-    tempValue: String,
-    windValue: String,
     onClose: () -> Unit,
     onRecenter: () -> Unit,
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
 ) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RideStatusBadge(
-                        text = if (isTrackingActive) "LIVE" else "PAUSED",
-                        containerColor = if (isTrackingActive) GajaColors.Primary else GajaColors.Warning,
-                    )
-                    RideStatusBadge(text = locationText, containerColor = GajaColors.Carbon.copy(alpha = 0.82f))
-                    RideStatusBadge(text = policyText, containerColor = GajaColors.Carbon.copy(alpha = 0.82f))
-                }
-                SecondaryConditionsRow(tempValue = tempValue, windValue = windValue)
-            }
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                MapControlButton(icon = Icons.Default.MyLocation, onClick = onRecenter)
-                MapControlButton(icon = Icons.Default.Add, onClick = onZoomIn)
-                MapControlButton(icon = Icons.Default.Remove, onClick = onZoomOut)
-                HudControlButton(
-                    icon = Icons.Default.Close,
-                    containerColor = GajaColors.Carbon.copy(alpha = 0.82f),
-                    size = 40.dp,
-                    onClick = onClose,
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        MapControlButton(icon = Icons.Default.MyLocation, onClick = onRecenter)
+        MapControlButton(icon = Icons.Default.Add, onClick = onZoomIn)
+        MapControlButton(icon = Icons.Default.Remove, onClick = onZoomOut)
+        HudControlButton(
+            icon = Icons.Default.Close,
+            containerColor = GajaColors.Carbon.copy(alpha = 0.84f),
+            size = GajaHudTokens.MapControlSize,
+            iconSize = GajaIconSizes.Medium,
+            borderColor = Color.White.copy(alpha = 0.12f),
+            contentDescription = "자유 주행 닫기",
+            onClick = onClose,
+        )
+    }
+}
+
+@Composable
+fun PrimaryRideMetric(
+    value: String,
+    unit: String,
+    footerText: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .width(GajaHudTokens.SpeedCardWidth)
+            .heightIn(min = GajaHudTokens.SpeedCardMinHeight)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        OutlinedHudText(
+            text = "현재 속도",
+            style = MaterialTheme.typography.labelMedium.copy(
+                shadow = Shadow(
+                    color = GajaColors.Carbon.copy(alpha = 0.7f),
+                    blurRadius = 10f,
                 )
+            ),
+            color = Color.White.copy(alpha = 0.66f),
+            fontWeight = FontWeight.SemiBold,
+        )
+        Row(verticalAlignment = Alignment.Bottom) {
+            OutlinedHudText(
+                text = value,
+                style = TextStyle(
+                    fontSize = 50.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-2).sp,
+                    color = Color.White,
+                    shadow = Shadow(
+                        color = GajaColors.Carbon.copy(alpha = 0.74f),
+                        blurRadius = 22f,
+                    ),
+                ),
+                edgeOffset = 2.dp,
+                edgeBlurRadius = 6f,
+            )
+            OutlinedHudText(
+                text = unit,
+                modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+                style = MaterialTheme.typography.labelLarge.copy(
+                    shadow = Shadow(
+                        color = GajaColors.Carbon.copy(alpha = 0.65f),
+                        blurRadius = 12f,
+                    )
+                ),
+                color = Color.White.copy(alpha = 0.82f),
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        OutlinedHudText(
+            text = footerText,
+            style = MaterialTheme.typography.labelMedium.copy(
+                shadow = Shadow(
+                    color = GajaColors.Carbon.copy(alpha = 0.62f),
+                    blurRadius = 10f,
+                )
+            ),
+            color = Color.White.copy(alpha = 0.74f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+fun RideSecondaryInfoCard(
+    locationText: String,
+    policyText: String,
+    distanceText: String,
+    temperatureText: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.Start,
+    ) {
+        SecondaryInfoLine(label = "위치", value = locationText)
+        SecondaryInfoLine(label = "정책", value = policyText)
+        SecondaryInfoLine(label = "거리", value = distanceText)
+        SecondaryInfoLine(label = "기온", value = temperatureText)
+    }
+}
+
+@Composable
+fun RideControlDock(
+    statusText: String,
+    elapsedText: String,
+    isLocationHealthy: Boolean,
+    inFlightSave: Boolean,
+    isTrackingActive: Boolean,
+    onToggleTracking: () -> Unit,
+    onSave: () -> Unit,
+    onStop: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(GajaHudTokens.FloatingGap),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RideStatusBadge(isTrackingActive = isTrackingActive)
+                    OutlinedHudText(
+                        text = if (isTrackingActive) "실시간 주행 중" else "주행 일시정지",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            shadow = Shadow(
+                                color = GajaColors.Carbon.copy(alpha = 0.72f),
+                                blurRadius = 12f,
+                            )
+                        ),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                RideStateTag(
+                    modifier = Modifier.padding(start = 12.dp, top = 2.dp),
+                    isTrackingActive = isTrackingActive,
+                    isLocationHealthy = isLocationHealthy,
+                )
+            }
+            OutlinedHudText(
+                text = statusText,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    shadow = Shadow(
+                        color = GajaColors.Carbon.copy(alpha = 0.76f),
+                        blurRadius = 10f,
+                    )
+                ),
+                color = Color.White.copy(alpha = 0.8f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.Top,
+            ) {
+                HudMetricPanel(label = "경과", value = elapsedText)
             }
         }
-        if (!bannerMessage.isNullOrBlank()) {
-            Surface(
-                color = GajaColors.Error.copy(alpha = 0.82f),
-                shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.wrapContentHeight(),
-            ) {
-                Text(
-                    text = bannerMessage,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            HudFloatingAction(
+                label = if (inFlightSave) "저장중" else "저장",
+                icon = GajaIconTokens.Saved,
+                containerColor = GajaColors.White.copy(alpha = 0.96f),
+                contentColor = if (inFlightSave) GajaColors.TextTertiary else GajaColors.TextPrimary,
+                borderColor = GajaColors.Border.copy(alpha = 0.72f),
+                size = GajaHudTokens.SecondaryControlSize,
+                enabled = !inFlightSave,
+                contentDescription = if (inFlightSave) "기록 저장 중" else "기록 저장",
+                onClick = onSave,
+            )
+            HudFloatingAction(
+                label = if (isTrackingActive) "일시정지" else "재개",
+                icon = if (isTrackingActive) Icons.Default.Pause else Icons.Default.PlayArrow,
+                containerColor = GajaColors.Primary,
+                contentColor = GajaColors.White,
+                size = GajaHudTokens.PrimaryControlSize,
+                iconSize = GajaIconSizes.PrimaryControl,
+                contentDescription = if (isTrackingActive) "주행 일시정지" else "주행 재개",
+                onClick = onToggleTracking,
+            )
+            HudFloatingAction(
+                label = "종료",
+                icon = Icons.Default.Close,
+                containerColor = GajaColors.White.copy(alpha = 0.96f),
+                contentColor = GajaColors.Error,
+                borderColor = GajaColors.Border.copy(alpha = 0.72f),
+                size = GajaHudTokens.SecondaryControlSize,
+                contentDescription = "주행 종료",
+                onClick = onStop,
+            )
         }
     }
 }
 
 @Composable
-fun RideStatusBadge(text: String, containerColor: Color) {
+fun SecondaryInfoLine(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        OutlinedHudText(
+            text = label,
+            style = MaterialTheme.typography.labelMedium.copy(
+                shadow = Shadow(
+                    color = GajaColors.Carbon.copy(alpha = 0.62f),
+                    blurRadius = 8f,
+                )
+            ),
+            color = Color.White.copy(alpha = 0.6f),
+            fontWeight = FontWeight.SemiBold,
+        )
+        OutlinedHudText(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                shadow = Shadow(
+                    color = GajaColors.Carbon.copy(alpha = 0.68f),
+                    blurRadius = 10f,
+                )
+            ),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+fun MapControlButton(icon: ImageVector, onClick: () -> Unit) {
+    val contentDescription = when (icon) {
+        Icons.Default.MyLocation -> "내 위치로 이동"
+        Icons.Default.Add -> "지도 확대"
+        Icons.Default.Remove -> "지도 축소"
+        else -> null
+    }
+    HudControlButton(
+        icon = icon,
+        containerColor = GajaColors.Carbon.copy(alpha = 0.82f),
+        size = GajaHudTokens.MapControlSize,
+        iconSize = GajaIconSizes.Medium,
+        borderColor = Color.White.copy(alpha = 0.12f),
+        contentDescription = contentDescription,
+        onClick = onClick,
+    )
+}
+
+@Composable
+fun HudControlButton(
+    icon: ImageVector,
+    containerColor: Color,
+    size: androidx.compose.ui.unit.Dp = GajaHudTokens.SecondaryControlSize,
+    iconSize: androidx.compose.ui.unit.Dp = GajaIconSizes.Control,
+    contentColor: Color = Color.White,
+    enabled: Boolean = true,
+    borderColor: Color = Color.Transparent,
+    contentDescription: String? = null,
+    onClick: () -> Unit,
+) {
     Surface(
-        color = containerColor,
+        modifier = Modifier.size(size),
+        color = if (enabled) containerColor else containerColor.copy(alpha = 0.68f),
         shape = CircleShape,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
+        border = BorderStroke(1.dp, borderColor),
+        shadowElevation = 10.dp,
     ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-            style = MaterialTheme.typography.labelSmall,
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.fillMaxSize(),
+            enabled = enabled,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(iconSize),
+                tint = if (enabled) contentColor else contentColor.copy(alpha = 0.4f),
+            )
+        }
+    }
+}
+
+@Composable
+fun HudFloatingAction(
+    label: String,
+    icon: ImageVector,
+    containerColor: Color,
+    contentColor: Color,
+    size: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier,
+    iconSize: androidx.compose.ui.unit.Dp = GajaIconSizes.Control,
+    borderColor: Color = Color.Transparent,
+    enabled: Boolean = true,
+    contentDescription: String? = null,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        HudControlButton(
+            icon = icon,
+            containerColor = containerColor,
+            size = size,
+            iconSize = iconSize,
+            contentColor = contentColor,
+            borderColor = borderColor,
+            enabled = enabled,
+            contentDescription = contentDescription,
+            onClick = onClick,
+        )
+        OutlinedHudText(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White.copy(alpha = 0.92f),
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun RideStatusBadge(isTrackingActive: Boolean) {
+    OutlinedHudText(
+        text = if (isTrackingActive) "LIVE" else "PAUSED",
+        style = MaterialTheme.typography.labelLarge.copy(
+            shadow = Shadow(
+                color = GajaColors.Carbon.copy(alpha = 0.52f),
+                blurRadius = 6f,
+            )
+        ),
+        color = if (isTrackingActive) GajaColors.PrimaryContainer else GajaColors.Warning,
+        fontWeight = FontWeight.Black,
+        edgeColor = GajaColors.Carbon.copy(alpha = 0.48f),
+        edgeOffset = 0.8.dp,
+        edgeBlurRadius = 2.5f,
+    )
+}
+
+@Composable
+private fun RideStateTag(
+    modifier: Modifier = Modifier,
+    isTrackingActive: Boolean,
+    isLocationHealthy: Boolean,
+) {
+    OutlinedHudText(
+        text = when {
+            !isTrackingActive -> "정지됨"
+            isLocationHealthy -> "GPS 양호"
+            else -> "GPS 확인 중"
+        },
+        modifier = modifier,
+        style = MaterialTheme.typography.labelMedium.copy(
+            shadow = Shadow(
+                color = GajaColors.Carbon.copy(alpha = 0.56f),
+                blurRadius = 7f,
+            )
+        ),
+        color = when {
+            !isTrackingActive -> GajaColors.Warning
+            isLocationHealthy -> GajaColors.PrimaryContainer
+            else -> GajaColors.Warning
+        },
+        fontWeight = FontWeight.Bold,
+        edgeColor = GajaColors.Carbon.copy(alpha = 0.42f),
+        edgeOffset = 0.8.dp,
+        edgeBlurRadius = 2.5f,
+    )
+}
+
+@Composable
+private fun HudMetricPanel(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        OutlinedHudText(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                shadow = Shadow(
+                    color = GajaColors.Carbon.copy(alpha = 0.72f),
+                    blurRadius = 8f,
+                )
+            ),
+            color = Color.White.copy(alpha = 0.62f),
+            fontWeight = FontWeight.SemiBold,
+        )
+        OutlinedHudText(
+            text = value,
+            style = MaterialTheme.typography.titleMedium.copy(
+                shadow = Shadow(
+                    color = GajaColors.Carbon.copy(alpha = 0.82f),
+                    blurRadius = 12f,
+                )
+            ),
             color = Color.White,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -657,161 +1124,78 @@ fun RideStatusBadge(text: String, containerColor: Color) {
 }
 
 @Composable
-fun PrimaryRideMetric(
-    value: String,
-    unit: String,
-    distanceText: String,
+private fun OutlinedHudText(
+    text: String,
+    style: TextStyle,
     modifier: Modifier = Modifier,
+    color: Color = Color.White,
+    fontWeight: FontWeight? = null,
+    textAlign: TextAlign? = null,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+    edgeColor: Color = GajaColors.Carbon.copy(alpha = 0.94f),
+    edgeOffset: androidx.compose.ui.unit.Dp = 1.5.dp,
+    edgeBlurRadius: Float = 4f,
 ) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = value,
-            style = TextStyle(
-                fontSize = 64.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-3).sp,
-                color = Color.White,
-                shadow = Shadow(
-                    color = Color.Black.copy(alpha = 0.72f),
-                    offset = androidx.compose.ui.geometry.Offset(0f, 4f),
-                    blurRadius = 18f,
-                ),
-            ),
+    val outlineStyle = style.copy(
+        shadow = Shadow(
+            color = edgeColor,
+            blurRadius = edgeBlurRadius,
         )
-        Text(
-            text = unit,
-            style = MaterialTheme.typography.titleMedium,
-            color = GajaColors.White.copy(alpha = 0.86f),
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.5.sp,
-        )
-        if (distanceText.isNotBlank()) {
-            RideStatusBadge(text = distanceText, containerColor = GajaColors.Carbon.copy(alpha = 0.78f))
-        }
-    }
-}
-
-@Composable
-fun SecondaryConditionsRow(
-    tempValue: String,
-    windValue: String,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Surface(
-            color = GajaColors.Carbon.copy(alpha = 0.78f),
-            shape = CircleShape,
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
-        ) {
-            Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CompactMetricChip(label = "기온", value = tempValue)
-                CompactMetricChip(label = "바람", value = windValue)
-            }
-        }
-    }
-}
-
-@Composable
-fun RideControlDock(
-    statusText: String,
-    inFlightSave: Boolean,
-    isTrackingActive: Boolean,
-    onToggleTracking: () -> Unit,
-    onSave: () -> Unit,
-    onStop: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        if (!isTrackingActive) {
-            Surface(
-                shape = CircleShape,
-                color = GajaColors.Warning.copy(alpha = 0.88f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.24f)),
-            ) {
-                Text(
-                    text = "일시정지됨",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = GajaColors.Carbon,
-                    fontWeight = FontWeight.Black,
-                )
-            }
-        }
-        if (statusText.isNotBlank()) {
-            Text(
-                text = statusText,
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.88f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            HudControlButton(
-                icon = if (isTrackingActive) Icons.Default.Pause else Icons.Default.PlayArrow,
-                containerColor = if (isTrackingActive) GajaColors.Carbon.copy(alpha = 0.80f) else GajaColors.Primary,
-                onClick = onToggleTracking,
-            )
-            GajaPrimaryButton(
-                text = if (inFlightSave) "저장 중..." else "기록 저장",
-                onClick = onSave,
-                enabled = !inFlightSave,
-                modifier = Modifier.widthIn(min = 180.dp),
-            )
-            HudControlButton(
-                icon = Icons.Default.Close,
-                containerColor = GajaColors.Error.copy(alpha = 0.82f),
-                onClick = onStop,
-            )
-        }
-    }
-}
-
-@Composable
-fun CompactMetricChip(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.52f),
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Black,
-        )
-    }
-}
-
-@Composable
-fun MapControlButton(icon: ImageVector, onClick: () -> Unit) {
-    HudControlButton(
-        icon = icon,
-        containerColor = GajaColors.Carbon.copy(alpha = 0.80f),
-        size = 40.dp,
-        onClick = onClick,
     )
+
+    Box(modifier = modifier) {
+        listOf(
+            Pair(-edgeOffset, 0.dp),
+            Pair(edgeOffset, 0.dp),
+            Pair(0.dp, -edgeOffset),
+            Pair(0.dp, edgeOffset),
+        ).forEach { (offsetX, offsetY) ->
+            Text(
+                text = text,
+                modifier = Modifier.offset(x = offsetX, y = offsetY),
+                style = outlineStyle,
+                color = edgeColor,
+                fontWeight = fontWeight,
+                textAlign = textAlign,
+                maxLines = maxLines,
+                overflow = overflow,
+            )
+        }
+
+        Text(
+            text = text,
+            style = style,
+            color = color,
+            fontWeight = fontWeight,
+            textAlign = textAlign,
+            maxLines = maxLines,
+            overflow = overflow,
+        )
+    }
 }
 
-@Composable
-fun HudControlButton(
-    icon: ImageVector,
-    containerColor: Color,
-    size: androidx.compose.ui.unit.Dp = 54.dp,
-    onClick: () -> Unit,
-) {
-    FilledIconButton(
-        onClick = onClick,
-        modifier = Modifier.size(size),
-        colors = IconButtonDefaults.filledIconButtonColors(containerColor = containerColor, contentColor = Color.White),
-        shape = CircleShape,
-    ) {
-        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(size * 0.46f))
+private fun compactHudText(value: String, fallback: String): String {
+    val sanitized = value.trim().ifBlank { fallback }
+    return if (sanitized.length <= 28) sanitized else sanitized.take(27) + "…"
+}
+
+private fun formatHudDistance(distanceMeters: Int): String {
+    return if (distanceMeters >= 1000) {
+        String.format("%.1fkm", distanceMeters / 1000.0)
+    } else {
+        "${distanceMeters}m"
+    }
+}
+
+private fun formatHudDuration(durationMillis: Long): String {
+    val totalMinutes = (durationMillis / 1000L / 60L).toInt()
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+    return when {
+        hours > 0 -> "${hours}시간 ${minutes}분"
+        totalMinutes > 0 -> "${totalMinutes}분"
+        else -> "1분 미만"
     }
 }
 
