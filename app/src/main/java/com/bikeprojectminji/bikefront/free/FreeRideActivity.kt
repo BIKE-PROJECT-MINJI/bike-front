@@ -451,8 +451,8 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
     val currentPolicyState = trackingController.policyState
     val tempValue = trackingController.weatherState.temperatureText.ifBlank { "--" }
     val policyLabel = currentPolicyState?.stateLabel ?: "확인 중"
-    val completionEligible = courseId != null && currentPolicyState?.isCompletionEligible == true
-    val completionDialogMessage = currentPolicyState?.completionDialogMessage
+    val completionEligible = courseId != null && currentPolicyState?.isCompletionEligible() == true
+    val completionDialogMessage = currentPolicyState?.getCompletionDialogMessage()
     val distanceText = remember(distanceMeters) { formatHudDistance(distanceMeters) }
     val activeElapsedMillis = trackingController.activeElapsedMillis()
     val elapsedText = remember(activeElapsedMillis) {
