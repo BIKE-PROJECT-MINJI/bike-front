@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -425,12 +426,8 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
 
     fun hasMeaningfulUnsavedRideProgress(): Boolean {
         val trackedPoints = trackingController.trackedPoints
-        if (trackedPoints.isEmpty()) {
-            return false
-        }
-
         val activeDurationSec = (trackingController.activeElapsedMillis() / 1000L).toInt()
-        return !FreeRideSaveCoordinator.isShortRideDuration(activeDurationSec)
+        return trackedPoints.isNotEmpty() || activeDurationSec > 0
     }
 
     fun requestExit() {
@@ -439,6 +436,10 @@ fun FreeRideHudScreen(courseId: Long?, onFinish: () -> Unit) {
             return
         }
         onFinish()
+    }
+
+    BackHandler {
+        requestExit()
     }
 
     LaunchedEffect(pendingSaveAfterAuth, inFlightSave) {
