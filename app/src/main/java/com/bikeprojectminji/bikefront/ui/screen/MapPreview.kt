@@ -52,6 +52,8 @@ import org.maplibre.geojson.Point
 private const val ROUTE_SOURCE_ID = "gaja-route-source"
 private const val ROUTE_LAYER_ID = "gaja-route-layer"
 private val SEOUL_CITY_HALL = LatLng(37.5665, 126.9780)
+private const val PREVIEW_ROUTE_COLOR = "#FF8224"
+private const val RIDE_ROUTE_COLOR = "#00C853"
 
 data class MapViewportActions(
     val recenter: () -> Unit,
@@ -202,8 +204,8 @@ private fun rememberMapViewWithLifecycle(
                     if (style.getLayer(ROUTE_LAYER_ID) == null) {
                         style.addLayer(
                             LineLayer(ROUTE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
-                                lineColor("#FF8224"),
-                                lineWidth(5f),
+                                lineColor(if (mode == MapDisplayMode.RIDE) RIDE_ROUTE_COLOR else PREVIEW_ROUTE_COLOR),
+                                lineWidth(if (mode == MapDisplayMode.RIDE) 6f else 5f),
                                 lineCap("round"),
                                 lineJoin("round"),
                             ),

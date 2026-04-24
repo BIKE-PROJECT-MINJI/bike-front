@@ -48,7 +48,9 @@ import com.bikeprojectminji.bikefront.ridepolicy.HttpRidePolicyEvaluationGateway
 import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyEvaluationGateway
 import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyUiMapper
 import com.bikeprojectminji.bikefront.ridepolicy.RidePolicyUiModel
+import com.bikeprojectminji.bikefront.ui.theme.GajaCardTokens
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
+import com.bikeprojectminji.bikefront.ui.theme.GajaRadius
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -135,6 +137,8 @@ fun CoursePreRideScreen(
                                 0,
                                 0,
                                 0,
+                                false,
+                                "",
                             )
                             policyLoading = false
                         }
@@ -159,6 +163,8 @@ fun CoursePreRideScreen(
                     0,
                     0,
                     0,
+                    false,
+                    "",
                 )
             }
 
@@ -184,16 +190,16 @@ fun CoursePreRideScreen(
             .padding(innerPadding)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = GajaSpacing.ScreenPadding, vertical = GajaSpacing.Small),
-        verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing),
+        verticalArrangement = Arrangement.spacedBy(GajaSpacing.SectionGap),
     ) {
         GajaBrandTopBar(title = "경로 미리보기")
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = GajaColors.Surface,
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(GajaRadius.XLarge),
             border = BorderStroke(1.dp, GajaColors.Border),
-            shadowElevation = 4.dp,
+            shadowElevation = GajaCardTokens.SubtleElevation,
         ) {
             GajaMapPreview(
                 modifier = Modifier.fillMaxWidth(),
@@ -214,14 +220,11 @@ fun CoursePreRideScreen(
 
         CoursePreRidePreviewStatusCard(status = preRideStatusCard)
 
-        Surface(
-            color = GajaColors.Surface,
-            shape = RoundedCornerShape(18.dp),
-            border = BorderStroke(1.dp, GajaColors.Border),
-            shadowElevation = 4.dp,
-            modifier = Modifier.fillMaxWidth(),
+        GajaSectionCard(
+            shadowElevation = GajaCardTokens.SubtleElevation,
+            contentPadding = PaddingValues(GajaCardTokens.ElevatedPadding),
         ) {
-            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -229,17 +232,9 @@ fun CoursePreRideScreen(
                 ) {
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny),
                     ) {
-                        Surface(color = GajaColors.PrimaryContainer, shape = RoundedCornerShape(999.dp)) {
-                            Text(
-                                "추천 코스",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = GajaColors.Primary,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
+                        GajaStatusBadge(text = "추천 코스")
                         Text(
                             resolvedCourse.title,
                             style = MaterialTheme.typography.titleLarge,
@@ -248,28 +243,20 @@ fun CoursePreRideScreen(
                         )
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(999.dp),
-                        color = GajaColors.Background,
-                        border = BorderStroke(1.dp, GajaColors.Border),
-                    ) {
-                        Text(
-                            text = if (startEnabled) "출발 가능" else "상태 확인 중",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (startEnabled) GajaColors.Primary else GajaColors.TextSecondary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
+                    GajaStatusBadge(
+                        text = if (startEnabled) "출발 가능" else "상태 확인 중",
+                        containerColor = if (startEnabled) GajaColors.PrimaryContainer else GajaColors.Background,
+                        contentColor = if (startEnabled) GajaColors.Primary else GajaColors.TextSecondary,
+                    )
                 }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny),
                 ) {
-                    CourseMetricBlock(label = "거리", value = formatDistance(resolvedCourse.distanceKm), modifier = Modifier.weight(1f))
-                    CourseMetricBlock(label = "예상 시간", value = "${resolvedCourse.estimatedDurationMin}분", modifier = Modifier.weight(1f))
-                    CourseMetricBlock(
+                    GajaMetricCard(label = "거리", value = formatDistance(resolvedCourse.distanceKm), modifier = Modifier.weight(1f), emphasized = true)
+                    GajaMetricCard(label = "예상 시간", value = "${resolvedCourse.estimatedDurationMin}분", modifier = Modifier.weight(1f))
+                    GajaMetricCard(
                         label = if (!policyState?.detailCaption.isNullOrBlank()) "시작점" else "경로",
                         value = policyState?.detailCaption ?: if (loading) "동기화" else "준비됨",
                         modifier = Modifier.weight(1f),
@@ -282,19 +269,16 @@ fun CoursePreRideScreen(
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = GajaColors.Primary)
         }
 
-        Surface(
+        GajaSectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 32.dp),
-            shape = RoundedCornerShape(18.dp),
-            color = GajaColors.Carbon.copy(alpha = 0.96f),
-            border = BorderStroke(1.dp, GajaColors.White.copy(alpha = 0.06f)),
+            containerColor = GajaColors.Carbon.copy(alpha = 0.96f),
+            borderColor = GajaColors.White.copy(alpha = 0.06f),
+            contentPadding = PaddingValues(GajaCardTokens.ElevatedPadding),
         ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small)) {
+                Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Micro)) {
                     Text(
                         text = "퍼포먼스 시작 준비",
                         style = MaterialTheme.typography.labelSmall,
@@ -322,16 +306,13 @@ fun CoursePreRideScreen(
 
 @Composable
 private fun CoursePreRidePreviewStatusCard(status: CoursePreRideStatusCardUiState) {
-    Surface(
-        color = status.containerColor,
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, GajaColors.Border.copy(alpha = 0.6f)),
-        modifier = Modifier.fillMaxWidth(),
+    GajaSectionCard(
+        containerColor = status.containerColor,
+        borderColor = GajaColors.Border.copy(alpha = 0.6f),
+        shape = RoundedCornerShape(GajaRadius.Large),
+        contentPadding = PaddingValues(horizontal = GajaCardTokens.ElevatedPadding, vertical = GajaCardTokens.CompactPadding),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Micro)) {
             Text(
                 text = status.title,
                 style = MaterialTheme.typography.titleSmall,
@@ -357,28 +338,6 @@ private fun CoursePreRidePreviewStatusCard(status: CoursePreRideStatusCardUiStat
 
 private fun formatDistance(distanceKm: Double): String {
     return if (distanceKm < 1.0) "${(distanceKm * 1000).toInt()}m" else "%.1fkm".format(distanceKm)
-}
-
-@Composable
-private fun CourseMetricBlock(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = GajaColors.Background,
-        border = BorderStroke(1.dp, GajaColors.Border),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(text = label, style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary)
-            Text(text = value, style = MaterialTheme.typography.titleMedium, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
-        }
-    }
 }
 
 private const val PRE_START_PHASE = "PRE_START"
