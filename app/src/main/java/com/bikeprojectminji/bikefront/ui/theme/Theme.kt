@@ -121,6 +121,12 @@ private val GajaTypography = Typography(
         lineHeight = 28.sp,
         color = Color.Unspecified
     ),
+    headlineSmall = TextStyle(
+        fontWeight = FontWeight.Bold,
+        fontSize = 18.sp,
+        lineHeight = 26.sp,
+        color = Color.Unspecified
+    ),
     titleLarge = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 18.sp,
@@ -131,6 +137,12 @@ private val GajaTypography = Typography(
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 22.sp,
+        color = Color.Unspecified
+    ),
+    titleSmall = TextStyle(
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
         color = Color.Unspecified
     ),
     bodyLarge = TextStyle(
@@ -145,10 +157,22 @@ private val GajaTypography = Typography(
         lineHeight = 20.sp,
         color = Color.Unspecified
     ),
+    bodySmall = TextStyle(
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+        lineHeight = 18.sp,
+        color = Color.Unspecified
+    ),
     labelLarge = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 13.sp,
         letterSpacing = 0.5.sp,
+        color = Color.Unspecified
+    ),
+    labelMedium = TextStyle(
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 12.sp,
+        letterSpacing = 0.3.sp,
         color = Color.Unspecified
     ),
     labelSmall = TextStyle(
@@ -168,12 +192,69 @@ private val GajaShapes = Shapes(
 )
 
 object GajaSpacing {
-    val ScreenPadding = 24.dp
+    val ScreenPadding = 16.dp
     val ItemSpacing = 16.dp
     val Large = 24.dp
     val Medium = 16.dp
     val Small = 12.dp
     val Tiny = 8.dp
+    val Micro = 4.dp
+    val SectionGap = 24.dp
+    val CardPadding = 16.dp
+    val CompactCardPadding = 12.dp
+}
+
+object GajaRadius {
+    val Small = 12.dp
+    val Medium = 16.dp
+    val Large = 20.dp
+    val XLarge = 24.dp
+    val Pill = 999.dp
+}
+
+object GajaButtonTokens {
+    val Height = 52.dp
+    val MinWidth = 180.dp
+}
+
+object GajaIconSizes {
+    val Small = 16.dp
+    val Medium = 18.dp
+    val Large = 20.dp
+    val Control = 22.dp
+    val PrimaryControl = 24.dp
+}
+
+object GajaCardTokens {
+    val DefaultPadding = 16.dp
+    val CompactPadding = 12.dp
+    val HeroPadding = 20.dp
+    val ElevatedPadding = 18.dp
+    val BorderWidth = 1.dp
+    val SubtleElevation = 2.dp
+}
+
+object GajaControlTokens {
+    val TopBarAction = 40.dp
+    val ListLeading = 44.dp
+    val LargeListLeading = 52.dp
+    val BadgeHorizontalPadding = 10.dp
+    val BadgeVerticalPadding = 6.dp
+}
+
+object GajaHudTokens {
+    val OverlayMargin = 16.dp
+    val FloatingGap = 12.dp
+    val CardPadding = 16.dp
+    val CompactPadding = 12.dp
+    val TopBannerRadius = 24.dp
+    val BottomCardRadius = 28.dp
+    val SecondaryCardWidth = 156.dp
+    val MapControlSize = 44.dp
+    val SecondaryControlSize = 56.dp
+    val PrimaryControlSize = 68.dp
+    val SpeedCardWidth = 148.dp
+    val SpeedCardMinHeight = 124.dp
 }
 
 val LocalGajaSpacing = staticCompositionLocalOf { GajaSpacing }
