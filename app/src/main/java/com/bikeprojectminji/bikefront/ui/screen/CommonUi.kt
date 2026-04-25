@@ -44,7 +44,7 @@ fun GajaBrandTopBar(
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black,
+                fontWeight = FontWeight.SemiBold,
                 color = GajaColors.TextPrimary
             )
         },
@@ -54,14 +54,14 @@ fun GajaBrandTopBar(
                 onProfileClick != null -> {
                     Surface(
                         shape = CircleShape,
-                        color = GajaColors.Surface,
+                        color = GajaColors.SurfaceMuted,
                         border = BorderStroke(1.dp, GajaColors.Border),
                     ) {
                         IconButton(onClick = onProfileClick, modifier = Modifier.size(GajaControlTokens.TopBarAction)) {
                             Icon(
                                 imageVector = Icons.Default.AccountCircle,
-                                contentDescription = "Profile",
-                                tint = GajaColors.TextPrimary,
+                                contentDescription = "내 정보",
+                                tint = GajaColors.Accent,
                                 modifier = Modifier.size(GajaIconSizes.Large)
                             )
                         }
@@ -91,7 +91,7 @@ fun GajaPrimaryButton(
         modifier = modifier
             .fillMaxWidth()
             .height(GajaButtonTokens.Height),
-        shape = RoundedCornerShape(GajaRadius.Medium),
+        shape = RoundedCornerShape(GajaRadius.Large),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = GajaColors.White,
@@ -182,7 +182,7 @@ fun GajaSectionCard(
         contentColor = contentColor,
         border = BorderStroke(GajaCardTokens.BorderWidth, borderColor),
         tonalElevation = tonalElevation,
-        shadowElevation = shadowElevation,
+        shadowElevation = if (shadowElevation == 0.dp) GajaCardTokens.SubtleElevation else shadowElevation,
     ) {
         Column(
             modifier = Modifier.padding(contentPadding),
@@ -225,7 +225,7 @@ fun GajaMetricCard(
     icon: ImageVector? = null,
     emphasized: Boolean = false,
     supportingText: String? = null,
-    containerColor: Color = if (emphasized) GajaColors.PrimaryContainer else GajaColors.Background,
+    containerColor: Color = if (emphasized) GajaColors.PrimaryContainer else GajaColors.SurfaceMuted,
     contentColor: Color = GajaColors.TextPrimary,
 ) {
     Surface(
@@ -322,7 +322,7 @@ fun HeroCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: String? = null,
-    gradientColors: List<Color> = listOf(GajaColors.Carbon, GajaColors.Accent)
+    gradientColors: List<Color> = GajaColors.HeroGradient,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -338,22 +338,23 @@ fun HeroCard(
             Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Medium)) {
                 if (icon != null) {
                     GajaStatusBadge(
-                        text = icon.uppercase(),
-                        containerColor = GajaColors.White.copy(alpha = 0.14f),
-                        contentColor = GajaColors.White,
+                        text = icon,
+                        containerColor = GajaColors.White.copy(alpha = 0.8f),
+                        contentColor = GajaColors.Accent,
                     )
                 }
                 
                 Column {
-                    Text(title, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(title, style = MaterialTheme.typography.headlineMedium, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(GajaSpacing.Micro))
-                    Text(description, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f))
+                    Text(description, style = MaterialTheme.typography.bodyMedium, color = GajaColors.TextSecondary)
                 }
 
                 GajaPrimaryButton(
                     text = buttonText,
                     onClick = onClick,
                     icon = Icons.AutoMirrored.Filled.ArrowForward,
+                    containerColor = GajaColors.Accent,
                 )
             }
         }
@@ -368,7 +369,7 @@ fun CourseCard(
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(GajaRadius.Medium),
-        color = GajaColors.White,
+        color = GajaColors.Surface,
         border = BorderStroke(1.dp, GajaColors.Border)
     ) {
         Row(
@@ -380,13 +381,13 @@ fun CourseCard(
                 modifier = Modifier
                     .size(GajaControlTokens.LargeListLeading)
                     .clip(RoundedCornerShape(GajaRadius.Small))
-                    .background(GajaColors.Background),
+                    .background(GajaColors.PrimarySoft),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = GajaIconTokens.Course, 
                     contentDescription = null, 
-                    tint = GajaColors.TextPrimary, 
+                    tint = GajaColors.Accent, 
                     modifier = Modifier.size(GajaIconSizes.PrimaryControl)
                 )
             }
