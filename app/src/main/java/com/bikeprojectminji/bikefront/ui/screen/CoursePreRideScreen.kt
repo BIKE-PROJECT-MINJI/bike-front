@@ -192,7 +192,7 @@ fun CoursePreRideScreen(
             .padding(horizontal = GajaSpacing.ScreenPadding, vertical = GajaSpacing.Small),
         verticalArrangement = Arrangement.spacedBy(GajaSpacing.SectionGap),
     ) {
-        GajaBrandTopBar(title = "경로 미리보기")
+        GajaBrandTopBar(title = "코스 미리보기")
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -234,7 +234,7 @@ fun CoursePreRideScreen(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny),
                     ) {
-                        GajaStatusBadge(text = "추천 코스")
+                        GajaStatusBadge(text = "추천")
                         Text(
                             resolvedCourse.title,
                             style = MaterialTheme.typography.titleLarge,
@@ -280,13 +280,13 @@ fun CoursePreRideScreen(
             Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small)) {
                 Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Micro)) {
                     Text(
-                        text = "퍼포먼스 시작 준비",
+                        text = "출발 전 확인",
                         style = MaterialTheme.typography.labelSmall,
                         color = GajaColors.Primary,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "출발 전에 상태를 확인하고 바로 주행으로 이어집니다.",
+                        text = "현재 위치와 시작 가능 여부를 확인한 뒤 바로 주행으로 이어집니다.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.74f),
                     )
