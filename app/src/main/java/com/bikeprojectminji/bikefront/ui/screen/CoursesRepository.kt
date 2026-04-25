@@ -5,8 +5,8 @@ import android.util.Log
 import android.content.Context
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import com.bikeprojectminji.bikefront.config.AppConfig
-import com.bikeprojectminji.bikefront.course.RecordedCourseStore
 import com.bikeprojectminji.bikefront.course.RecordedCourseItem
+import com.bikeprojectminji.bikefront.course.RecordedCourseStore
 import com.bikeprojectminji.bikefront.home.FeaturedCourseApiClient
 import org.json.JSONObject
 import java.io.BufferedReader
