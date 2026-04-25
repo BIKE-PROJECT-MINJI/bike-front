@@ -21,6 +21,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.bikeprojectminji.bikefront.ui.screen.CourseCard
+import com.bikeprojectminji.bikefront.ui.screen.EmptyStateView
+import com.bikeprojectminji.bikefront.ui.screen.ErrorStateView
+import com.bikeprojectminji.bikefront.ui.screen.GajaBrandTopBar
+import com.bikeprojectminji.bikefront.ui.screen.GajaSectionCard
+import com.bikeprojectminji.bikefront.ui.screen.LoadingStateView
+import com.bikeprojectminji.bikefront.ui.screen.SectionHeader
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +35,7 @@ import kotlinx.coroutines.withContext
 
 private enum class CourseTab(val label: String, val description: String) {
     RECOMMENDED("추천", "엄선된 인기 코스"),
-    ALL("전체", "모든 코스 둘러보기"),
+    ALL("전체", "공개 코스 둘러보기"),
 }
 
 private sealed class CoursesLoadState {
@@ -95,6 +102,7 @@ fun CoursesScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(innerPadding)
                     .padding(horizontal = GajaSpacing.ScreenPadding),
                 verticalArrangement = Arrangement.spacedBy(GajaSpacing.SectionGap)
             ) {
@@ -110,7 +118,16 @@ fun CoursesScreen(
                     onTabSelected = { selectedTab = it },
                 )
 
-                val loadState = if (selectedTab == CourseTab.RECOMMENDED) featuredState.value else allCoursesState.value
+                Text(
+                    text = "추천에서는 엄선된 코스를, 전체에서는 공개된 코스를 함께 볼 수 있어요.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GajaColors.TextSecondary,
+                )
+
+                val loadState = when (selectedTab) {
+                    CourseTab.RECOMMENDED -> featuredState.value
+                    CourseTab.ALL -> allCoursesState.value
+                }
 
                 AnimatedVisibility(
                     visible = true,
@@ -125,7 +142,7 @@ fun CoursesScreen(
                             if (loadState.courses.isEmpty()) {
                                 EmptyStateView("결과 없음", "표시할 코스가 없습니다.")
                             } else {
-                                CourseListContent(loadState.courses, selectedTab, onOpenCourse)
+                                CourseListContent(loadState.courses, onOpenCourse)
                             }
                         }
                     }
@@ -175,7 +192,6 @@ private fun CourseTabSelector(selectedTab: CourseTab, onTabSelected: (CourseTab)
 @Composable
 private fun CourseListContent(
     courses: List<CourseCardUiModel>,
-    selectedTab: CourseTab,
     onOpenCourse: (CourseCardUiModel) -> Unit,
 ) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {

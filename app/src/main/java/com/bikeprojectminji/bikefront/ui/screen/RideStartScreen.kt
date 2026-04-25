@@ -6,10 +6,8 @@ import com.bikeprojectminji.bikefront.analytics.AnalyticsTracker
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
@@ -20,15 +18,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -37,9 +32,7 @@ import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import com.bikeprojectminji.bikefront.auth.HttpAuthLoginGateway
 import com.bikeprojectminji.bikefront.ui.theme.GajaCardTokens
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
-import com.bikeprojectminji.bikefront.ui.theme.GajaControlTokens
 import com.bikeprojectminji.bikefront.ui.theme.GajaIconSizes
-import com.bikeprojectminji.bikefront.ui.theme.GajaRadius
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -112,7 +105,7 @@ fun RideStartScreen(
     }
 
     Scaffold(
-        topBar = { GajaBrandTopBar(title = "탐색", onProfileClick = onOpenMyInfo) },
+        topBar = { GajaBrandTopBar(title = "홈", onProfileClick = onOpenMyInfo) },
         containerColor = GajaColors.Background
     ) { scaffoldPadding ->
         Column(
@@ -123,22 +116,15 @@ fun RideStartScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(GajaSpacing.SectionGap)
         ) {
-            // 1. 요약 대시보드
             Box(modifier = Modifier.padding(horizontal = GajaSpacing.ScreenPadding)) {
                 ActivitySummaryDashboard(activitySummaryState)
             }
 
-            // 2. 가로 스크롤 추천 섹션
             Column {
                 SectionHeader(
-                    title = "인기 라이딩 경로",
-                    subtitle = "많이 찾는 코스부터 가볍게 골라보세요",
+                    title = "추천 코스",
+                    subtitle = "지금 바로 출발하기 좋은 코스를 골라보세요",
                     modifier = Modifier.padding(horizontal = GajaSpacing.ScreenPadding),
-                    action = {
-                        TextButton(onClick = { }) {
-                            Text("전체 보기", color = GajaColors.Primary, fontWeight = FontWeight.Bold)
-                        }
-                    }
                 )
                 
                 Row(
@@ -160,14 +146,12 @@ fun RideStartScreen(
                 }
             }
 
-            // 3. 중앙 액션 버튼 (한글화 및 강조)
             Box(modifier = Modifier.padding(horizontal = GajaSpacing.ScreenPadding)) {
                 CompactFreeRidePanel(onStartFreeRide = onStartFreeRide)
             }
 
-            // 4. 리스트형 주변 코스
             Column(modifier = Modifier.padding(horizontal = GajaSpacing.ScreenPadding)) {
-                SectionHeader(title = "내 주변 코스", subtitle = "지금 위치에서 시작하기 좋은 코스를 모았어요")
+                SectionHeader(title = "근처에서 시작하기 좋은 코스", subtitle = "길게 고르지 않고 바로 출발할 수 있게 정리했어요")
 
                 when (val state = listState) {
                     is SectionState.Loading -> LoadingStateView("주변 코스를 찾는 중")
@@ -193,11 +177,11 @@ fun ActivitySummaryDashboard(state: RideStartActivitySummaryState) {
         when (state) {
             RideStartActivitySummaryState.Loading -> LoadingStateView("이번 주 기록을 불러오는 중")
             is RideStartActivitySummaryState.SignedOut -> SummaryMessageContent(
-                title = "이번 주 나의 활동",
+                title = "라이딩 요약",
                 message = state.message,
             )
             is RideStartActivitySummaryState.Error -> SummaryMessageContent(
-                title = "이번 주 나의 활동",
+                title = "라이딩 요약",
                 message = state.message,
             )
             is RideStartActivitySummaryState.Ready -> {
@@ -210,7 +194,7 @@ fun ActivitySummaryDashboard(state: RideStartActivitySummaryState) {
                         verticalAlignment = Alignment.Top,
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("이번 주 활동", style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary)
+                            Text("이번 주 라이딩", style = MaterialTheme.typography.labelSmall, color = GajaColors.TextSecondary)
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(
                                     state.primaryDistanceText,
@@ -227,7 +211,7 @@ fun ActivitySummaryDashboard(state: RideStartActivitySummaryState) {
                             }
                         }
 
-                        GajaStatusBadge(text = state.rideCountText)
+                        GajaStatusBadge(text = "${state.rideCountText} 진행")
                     }
 
                     Text(state.helperText, style = MaterialTheme.typography.bodyMedium, color = GajaColors.TextSecondary)
@@ -276,18 +260,18 @@ private fun CompactFreeRidePanel(
                     verticalArrangement = Arrangement.spacedBy(GajaSpacing.Micro),
                 ) {
                     GajaStatusBadge(
-                        text = "자유 주행",
-                        containerColor = GajaColors.Primary.copy(alpha = 0.16f),
-                        contentColor = GajaColors.Primary,
+                        text = "바로 출발",
+                        containerColor = GajaColors.PrimaryContainer,
+                        contentColor = GajaColors.Accent,
                     )
                     Text(
-                        text = "코스 없이 바로 출발",
+                        text = "코스 없이 가볍게 시작",
                         style = MaterialTheme.typography.titleLarge,
                         color = GajaColors.White,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "현재 위치에서 HUD를 켜고 바로 기록을 시작할 수 있어요.",
+                        text = "현재 위치에서 바로 주행을 켜고 기록을 남길 수 있어요.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = GajaColors.White.copy(alpha = 0.74f),
                     )
@@ -307,7 +291,7 @@ private fun CompactFreeRidePanel(
             ) {
                 CompactStatusPill(text = "즉시 시작", modifier = Modifier.weight(1f))
                 CompactStatusPill(text = "기록 저장", modifier = Modifier.weight(1f))
-                CompactStatusPill(text = "HUD 진입", modifier = Modifier.weight(1f))
+                CompactStatusPill(text = "주행 화면", modifier = Modifier.weight(1f))
             }
 
             GajaPrimaryButton(
@@ -348,7 +332,7 @@ fun FeaturedCourseGridItem(course: CourseCardUiModel, onClick: () -> Unit) {
                 Spacer(Modifier.height(GajaSpacing.Tiny))
                 Text(course.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 Text(
-                    text = "탭해서 코스 미리보기",
+                    text = "출발 전 확인",
                     style = MaterialTheme.typography.bodySmall,
                     color = GajaColors.TextSecondary,
                     maxLines = 1,

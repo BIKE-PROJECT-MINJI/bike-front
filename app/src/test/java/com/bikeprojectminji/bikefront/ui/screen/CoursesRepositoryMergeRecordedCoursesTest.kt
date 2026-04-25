@@ -1,6 +1,5 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
-import com.bikeprojectminji.bikefront.course.RecordedCourseItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -10,13 +9,13 @@ class CoursesRepositoryMergeRecordedCoursesTest {
 
     @Test
     fun `merge marks only canonical items that also exist in recorded store`() {
+        val recordedItems = listOf(
+            com.bikeprojectminji.bikefront.course.RecordedCourseItem(id = 10L, title = "로컬 저장 코스", distanceKm = 11.0, estimatedDurationMin = 31),
+            com.bikeprojectminji.bikefront.course.RecordedCourseItem(id = 99L, title = "로컬 전용 코스", distanceKm = 5.0, estimatedDurationMin = 15),
+        )
         val items = listOf(
             CourseCardUiModel(id = 10L, title = "백엔드 코스", distanceKm = 10.0, estimatedDurationMin = 30),
             CourseCardUiModel(id = 20L, title = "다른 코스", distanceKm = 20.0, estimatedDurationMin = 50),
-        )
-        val recordedItems = listOf(
-            RecordedCourseItem(id = 10L, title = "로컬 저장 코스", distanceKm = 11.0, estimatedDurationMin = 31),
-            RecordedCourseItem(id = 99L, title = "로컬 전용 코스", distanceKm = 5.0, estimatedDurationMin = 15),
         )
 
         val merged = mergeRecordedCoursesWithCanonicalItems(items, recordedItems)

@@ -1,18 +1,20 @@
 package com.bikeprojectminji.bikefront.ui.screen
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,7 +42,11 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = GajaColors.BrandGradient
+                    colors = listOf(
+                        GajaColors.LimeAccent,
+                        GajaColors.BrandGradient.first(),
+                        GajaColors.BrandGradient.last(),
+                    )
                 )
             ),
         contentAlignment = Alignment.Center
@@ -50,31 +56,39 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.graphicsLayer { alpha = alphaAnim.value }
         ) {
-            // GAJA Brand Icon (Bike Pictogram)
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
-                contentDescription = "GAJA Logo",
+            Surface(
                 modifier = Modifier.size(120.dp),
-                tint = GajaColors.Accent
-            )
-            
+                shape = CircleShape,
+                color = GajaColors.White.copy(alpha = 0.86f),
+                border = BorderStroke(1.dp, GajaColors.White.copy(alpha = 0.55f)),
+                shadowElevation = 10.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
+                        contentDescription = "gaja 로고",
+                        modifier = Modifier.size(52.dp),
+                        tint = GajaColors.Accent
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
-            
-            // GAJA Brand Text
+
             Text(
-                text = "GAJA",
+                text = "gaja",
                 style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 56.sp,
-                    letterSpacing = 6.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White
+                    fontSize = 44.sp,
+                    letterSpacing = (-1.2).sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GajaColors.TextPrimary
                 )
             )
-            
+
             Text(
-                text = "Ride Your Discovery",
+                text = "가볍게 떠나는 자전거 이동",
                 style = MaterialTheme.typography.labelLarge,
-                color = GajaColors.LimeAccent.copy(alpha = 0.9f),
+                color = GajaColors.TextSecondary,
                 modifier = Modifier.padding(top = 12.dp)
             )
         }

@@ -74,17 +74,17 @@ fun FreeRidePreRideScreen(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FreeRideStatusBadge(text = "LIVE", containerColor = GajaColors.Primary)
-                            FreeRideStatusBadge(text = "GPS 준비", containerColor = GajaColors.Success)
+                            FreeRideStatusBadge(text = "바로 출발", containerColor = GajaColors.Primary)
+                            FreeRideStatusBadge(text = "위치 기반", containerColor = GajaColors.Success)
                         }
                         Text(
-                            text = "지금 바로 자유 주행",
+                            text = "가볍게 자유 주행 시작",
                             style = MaterialTheme.typography.displayMedium,
                             color = GajaColors.TextPrimary,
                             fontWeight = FontWeight.Black,
                         )
                         Text(
-                            text = "현재 위치를 기준으로 출발하고, 기록을 저장해 코스로 이어갈 수 있습니다.",
+                            text = "현재 위치를 기준으로 출발하고 주행 기록을 저장할 수 있어요.",
                             style = MaterialTheme.typography.bodyLarge,
                             color = GajaColors.TextSecondary,
                         )
@@ -92,8 +92,8 @@ fun FreeRidePreRideScreen(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing), modifier = Modifier.fillMaxWidth()) {
-                    GajaMetricCard(label = "지도", value = "실시간", modifier = Modifier.weight(1f), emphasized = true)
-                    GajaMetricCard(label = "기록", value = "저장 가능", modifier = Modifier.weight(1f))
+                    GajaMetricCard(label = "주행 화면", value = "실시간", modifier = Modifier.weight(1f), emphasized = true)
+                    GajaMetricCard(label = "기록", value = "자동 저장 준비", modifier = Modifier.weight(1f))
                 }
             }
 
@@ -108,13 +108,13 @@ fun FreeRidePreRideScreen(
                     contentPadding = PaddingValues(horizontal = GajaCardTokens.DefaultPadding, vertical = GajaSpacing.Small),
                 ) {
                     Text(
-                        text = "주행 중에는 속도, 거리, 날씨, 주행 상태를 지도 위 HUD로 바로 확인할 수 있습니다.",
+                        text = "주행 중에는 지도 위에서 속도와 상태를 바로 확인할 수 있어요.",
                         style = MaterialTheme.typography.bodySmall,
                         color = GajaColors.TextSecondary,
                     )
                 }
                 GajaPrimaryButton(
-                    text = "주행 시작",
+                    text = "자유 주행 시작",
                     onClick = {
                         analyticsTracker.track("ride_start_clicked", "free_ride_pre", mapOf("button" to "start_ride"))
                         onStartRide()

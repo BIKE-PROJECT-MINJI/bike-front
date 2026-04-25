@@ -106,7 +106,7 @@ cmd.exe /c gradlew.bat test
 
 ## API base URL
 
-- debug 기본값: `http://10.0.2.2:8080`
+- debug 기본값: `https://api.gajabike.shop`
 - 현재 배포 backend 기준 base URL: `https://api.gajabike.shop`
 - release URL은 환경에 따라 gradle property로 덮어씁니다.
 - 필요 시 gradle property로 덮어쓸 수 있습니다.
@@ -120,7 +120,7 @@ cmd.exe /c gradlew.bat test
 
 ## Device APK note
 
-- 실제 Android 기기에 debug APK를 설치할 때는 기본 `10.0.2.2` 주소를 그대로 쓰면 안 됩니다.
+- 예전 emulator-local 기본값 `10.0.2.2` 대신 현재는 운영 backend URL을 debug 기본값으로 사용합니다.
 - 실기기 설치용 debug APK는 접근 가능한 운영 또는 staging URL로 다시 빌드합니다.
 - 기본 debug APK 경로: `app/build/outputs/apk/debug/app-debug.apk`
 

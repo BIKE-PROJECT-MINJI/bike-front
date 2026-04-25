@@ -16,8 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +32,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
 import com.bikeprojectminji.bikefront.ui.screen.GajaBrandTopBar
+import com.bikeprojectminji.bikefront.ui.screen.GajaSectionCard
+import com.bikeprojectminji.bikefront.ui.screen.GajaStatusBadge
 import com.bikeprojectminji.bikefront.ui.screen.GajaPrimaryButton
 import com.bikeprojectminji.bikefront.ui.screen.SecondaryActionButton
 import com.bikeprojectminji.bikefront.ui.screen.SectionHeader
@@ -247,7 +251,7 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
     }
 
     Scaffold(
-        topBar = { GajaBrandTopBar(title = "프로필") },
+        topBar = { GajaBrandTopBar(title = if (sessionSnapshot.signedIn) "내 계정" else "로그인") },
         containerColor = GajaColors.Background,
     ) { innerPadding ->
         Column(
@@ -259,11 +263,16 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
         ) {
             Spacer(Modifier.height(GajaSpacing.Small))
 
-            Text(
-                text = helperMessage,
-                style = MaterialTheme.typography.bodyMedium,
-                color = GajaColors.TextSecondary,
-            )
+            GajaSectionCard(
+                containerColor = GajaColors.SurfaceMuted,
+                shape = RoundedCornerShape(GajaSpacing.Large),
+            ) {
+                Text(
+                    text = helperMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GajaColors.TextSecondary,
+                )
+            }
 
             if (sessionSnapshot.signedIn) {
                 SignedInSessionContent(
@@ -337,19 +346,39 @@ private fun LoggedOutLoginContent(
     onSubmit: () -> Unit,
     onClose: () -> Unit,
 ) {
+    GajaSectionCard(
+        containerColor = GajaColors.PrimarySoft,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(GajaSpacing.Large),
+    ) {
+        Text(
+            text = if (authMode == AuthMode.LOGIN) "이메일로 바로 시작" else "간단히 가입하고 이어서 이용",
+            style = MaterialTheme.typography.titleLarge,
+            color = GajaColors.TextPrimary,
+        )
+        Text(
+            text = if (authMode == AuthMode.LOGIN) {
+                if (returnAfterSave) "로그인 후 저장 중이던 코스 흐름으로 바로 돌아갑니다." else "필요한 정보만 입력하면 바로 라이딩 기록을 이어갈 수 있어요."
+            } else {
+                if (returnAfterSave) "가입을 마치면 저장 중이던 흐름으로 곧바로 돌아갑니다." else "표시 이름까지 입력하면 바로 이용을 시작할 수 있어요."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = GajaColors.TextSecondary,
+        )
+    }
+
     SectionHeader(
         title = if (authMode == AuthMode.LOGIN) "로그인" else "회원가입",
         subtitle = if (authMode == AuthMode.LOGIN) {
             if (returnAfterSave) {
-                "기존 계정으로 로그인하고 저장 중이던 코스 흐름을 바로 이어갑니다."
+                "기존 계정으로 바로 이어가기"
             } else {
-                "이메일/비밀번호로 세션을 만들고 갱신합니다."
+                "이메일로 빠르게 시작"
             }
         } else {
             if (returnAfterSave) {
-                "새 계정을 만든 뒤 바로 코스 저장과 공유 흐름으로 돌아갑니다."
+                "가입 후 저장 흐름으로 돌아가기"
             } else {
-                "새 계정을 만든 뒤 바로 프로필 세션을 저장합니다."
+                "기본 정보만 입력하고 시작"
             }
         },
     )
@@ -402,6 +431,8 @@ private fun LoggedOutLoginContent(
         label = { Text("비밀번호") },
         placeholder = { Text("비밀번호를 입력하세요") },
         enabled = !inFlight,
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         shape = MaterialTheme.shapes.medium,
         colors = outlinedFieldColors(),
     )
@@ -439,32 +470,28 @@ private fun SignedInSessionContent(
 ) {
     SectionHeader(
         title = "계정 상태",
-        subtitle = if (sessionSnapshot.needsRefresh) "access token이 만료되어 refresh로 갱신할 수 있습니다." else "현재 세션이 저장되어 있습니다.",
+        subtitle = if (sessionSnapshot.needsRefresh) "로그인 상태를 한 번 새로 확인해 주세요." else "현재 계정으로 저장과 공유를 이어갈 수 있어요.",
     )
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = GajaColors.White),
-    ) {
-        Column(
-            modifier = Modifier.padding(GajaSpacing.Large),
-            verticalArrangement = Arrangement.spacedBy(GajaSpacing.Small),
-        ) {
-            Text(sessionSnapshot.displayName, style = MaterialTheme.typography.headlineSmall, color = GajaColors.TextPrimary)
-            Text(
-                text = if (sessionSnapshot.profileImageUrl.isBlank()) "프로필 이미지 URL이 아직 없습니다." else sessionSnapshot.profileImageUrl,
-                style = MaterialTheme.typography.bodySmall,
-                color = GajaColors.TextSecondary,
-            )
-            SessionStatusRow("세션 상태", if (sessionSnapshot.hasUsableAccessToken) "즉시 사용 가능" else "갱신 필요")
-            SessionStatusRow("access 만료 시각", sessionSnapshot.accessExpiryText)
-            SessionStatusRow("refresh 만료 시각", sessionSnapshot.refreshExpiryText)
+    GajaSectionCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(GajaSpacing.Large)) {
+        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Tiny)) {
+                Text(sessionSnapshot.displayName, style = MaterialTheme.typography.headlineSmall, color = GajaColors.TextPrimary)
+                Text(
+                    text = if (sessionSnapshot.hasUsableAccessToken) "현재 계정으로 바로 이용할 수 있어요." else "다시 확인하면 안전하게 이어서 이용할 수 있어요.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GajaColors.TextSecondary,
+                )
+            }
+            GajaStatusBadge(text = if (sessionSnapshot.needsRefresh) "재확인 필요" else "이용 가능")
         }
+
+        SessionStatusRow("세션 상태", if (sessionSnapshot.hasUsableAccessToken) "바로 이용 가능" else "새로 확인 필요")
+        SessionStatusRow("프로필 이미지", if (sessionSnapshot.profileImageUrl.isBlank()) "아직 없음" else "연결됨")
     }
 
     GajaPrimaryButton(
-        text = if (inFlight) "세션 처리 중..." else if (sessionSnapshot.needsRefresh) "세션 갱신" else "세션 다시 확인",
+        text = if (inFlight) "확인 중..." else if (sessionSnapshot.needsRefresh) "로그인 상태 새로 확인" else "계속 이용하기",
         onClick = onRefresh,
         enabled = !inFlight,
     )
