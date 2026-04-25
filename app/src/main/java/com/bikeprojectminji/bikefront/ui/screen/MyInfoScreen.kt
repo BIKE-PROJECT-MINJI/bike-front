@@ -161,24 +161,24 @@ fun MyInfoScreen(
 fun NotLoggedInContent(onOpenProfile: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.Large)) {
         HeroCard(
-            title = "성장을 기록하세요",
-            description = "로그인하면 저장한 코스와 주행 기록을 한곳에서 이어서 볼 수 있어요.",
+            title = "로그인하고 기록을 이어가세요",
+            description = "저장한 코스와 주행 기록을 같은 계정에서 차분하게 관리할 수 있어요.",
             buttonText = "로그인 / 회원가입",
             onClick = onOpenProfile,
-            icon = "계정 연결"
+            icon = "계정"
         )
 
         ActivityRow(
             icon = GajaIconTokens.Profile,
-            title = "로그인 / 회원가입",
-            desc = "내 기록과 저장한 코스를 같은 계정으로 이어서 관리하기",
+            title = "내 계정 연결",
+            desc = "저장한 코스와 주행 이력을 한곳에서 관리",
             onClick = onOpenProfile,
         )
 
-        SectionHeader(title = "로그인하면 바로 할 수 있는 일", subtitle = "필요한 기능만 간단히 안내해 드려요")
+        SectionHeader(title = "로그인 후 바로 되는 일", subtitle = "지금 필요한 기능만 간단히 정리했어요")
         
         Column(verticalArrangement = Arrangement.spacedBy(GajaSpacing.ItemSpacing)) {
-            listOf("주행 경로 저장 및 공유", "상세 주행 통계 분석", "나만의 코스 만들기", "라이딩 이력 관리").forEach { text ->
+            listOf("주행 기록 저장", "내 코스 관리", "라이딩 이력 확인").forEach { text ->
                 GajaSectionCard(contentPadding = PaddingValues(GajaCardTokens.DefaultPadding)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -209,16 +209,16 @@ private fun ProfileContent(
                     horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Medium),
                 ) {
                     Box(
-                        modifier = Modifier.size(58.dp).clip(CircleShape).background(GajaColors.Carbon),
+                        modifier = Modifier.size(58.dp).clip(CircleShape).background(GajaColors.PrimaryContainer),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(state.displayName.take(1).uppercase(), style = MaterialTheme.typography.headlineMedium, color = GajaColors.White)
+                        Text(state.displayName.take(1).uppercase(), style = MaterialTheme.typography.headlineMedium, color = GajaColors.Accent)
                     }
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(state.displayName, style = MaterialTheme.typography.titleLarge, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text("라이딩 통계 대시보드", style = MaterialTheme.typography.bodySmall, color = GajaColors.TextSecondary)
+                        Text("내 라이딩 요약", style = MaterialTheme.typography.bodySmall, color = GajaColors.TextSecondary)
                     }
-                    GajaStatusBadge(text = "프로필")
+                    GajaStatusBadge(text = "이용 중")
                 }
 
                 Row(
@@ -232,7 +232,7 @@ private fun ProfileContent(
             }
         }
 
-        SectionHeader(title = "종합 통계", subtitle = "전체 기록을 빠르게 훑을 수 있게 밀도를 높였어요")
+        SectionHeader(title = "종합 통계", subtitle = "전체 기록을 한눈에 확인할 수 있어요")
         state.summaryErrorMessage?.let { message ->
             GajaSectionCard {
                 Text(
@@ -244,7 +244,7 @@ private fun ProfileContent(
         }
         if (state.isWeeklySummaryEmpty) {
             Text(
-                text = "이번 주 활동은 아직 비어 있습니다.",
+                text = "이번 주 기록이 아직 없어요.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = GajaColors.TextSecondary,
             )
@@ -259,7 +259,7 @@ private fun ProfileContent(
             DashboardMetricCard("평균 속도", state.avgSpeed, Modifier.weight(1f))
         }
 
-        SectionHeader(title = "바로가기", subtitle = "기록 아래에서 바로 다음 행동으로 이어지게 정리했어요")
+        SectionHeader(title = "바로가기", subtitle = "자주 보는 화면만 모아두었어요")
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             CompactShortcutRow(
                 icon = GajaIconTokens.Saved,
@@ -281,7 +281,7 @@ private fun ProfileContent(
             )
         }
 
-        SectionHeader(title = "설정")
+        SectionHeader(title = "계정")
         GajaPrimaryButton("프로필 수정", onClick = onOpenProfile)
         SecondaryActionButton("로그아웃", onClick = { /* TODO */ })
     }
