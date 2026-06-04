@@ -34,6 +34,11 @@ public class HttpAuthLoginGateway implements AuthLoginGateway {
     }
 
     @Override
+    public void kakaoLogin(String kakaoAccessToken, Callback callback) {
+        executeAuth("/api/v1/auth/kakao/login", KakaoLoginRequestBodyFactory.create(kakaoAccessToken), "", callback);
+    }
+
+    @Override
     public void refresh(String refreshToken, Callback callback) {
         executorService.execute(() -> {
             HttpURLConnection connection = null;

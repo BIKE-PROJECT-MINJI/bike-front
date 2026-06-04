@@ -19,37 +19,46 @@ import androidx.compose.ui.unit.sp
 import com.bikeprojectminji.bikefront.R
 
 object GajaColors {
-    val Primary = Color(0xFF5F8F6B)
+    val Primary = Color(0xFF216C63)
     val OnPrimary = Color(0xFFFFFFFF)
-    val PrimaryContainer = Color(0xFFE4F0E4)
-    val PrimarySoft = Color(0xFFF1F6EF)
+    val PrimaryContainer = Color(0xFFDFF1EA)
+    val PrimarySoft = Color(0xFFEFF8F4)
 
-    val Accent = Color(0xFF294034)
-    val AccentSoft = Color(0xFF385344)
-    val LimeAccent = Color(0xFFF8FBF6)
-    val BrightLime = Color(0xFFEFF6EC)
+    val Accent = Color(0xFF17211D)
+    val AccentSoft = Color(0xFF263A34)
+    val LimeAccent = Color(0xFFF7FAEF)
+    val BrightLime = Color(0xFFE7F7B8)
+    val RouteBlue = Color(0xFF2E6BFF)
+    val RouteBlueSoft = Color(0xFFAFC7FF)
+    val Energy = Color(0xFFFF6B3D)
+    val EnergySoft = Color(0xFFFFE4D8)
+    val PaceViolet = Color(0xFF7C5CFF)
+    val PaceVioletSoft = Color(0xFFE7E1FF)
+    val Volt = Color(0xFFE7F76E)
 
     val White = Color(0xFFFFFFFF)
-    val Background = Color(0xFFF5F7F2)
-    val Surface = Color(0xFFFFFEFB)
-    val SurfaceMuted = Color(0xFFF7FAF5)
+    val Background = Color(0xFFF7F8F4)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceMuted = Color(0xFFF1F4F0)
+    val SurfaceElevated = Color(0xFFFBFCF7)
 
-    val TextPrimary = Color(0xFF24342B)
-    val TextSecondary = Color(0xFF5C6C61)
-    val TextTertiary = Color(0xFF8A948D)
+    val TextPrimary = Color(0xFF18211D)
+    val TextSecondary = Color(0xFF5B6862)
+    val TextTertiary = Color(0xFF89958F)
 
-    val Carbon = Color(0xFF304437)
-    val Graphite = Color(0xFF4A6254)
+    val Ink = Color(0xFF111816)
+    val Carbon = Color(0xFF20312C)
+    val Graphite = Color(0xFF52625D)
 
-    val Success = Color(0xFF5A8A63)
-    val Warning = Color(0xFFC78B46)
+    val Success = Color(0xFF14805E)
+    val Warning = Color(0xFFF0B85A)
     val Error = Color(0xFFC85B50)
 
-    val Border = Color(0xFFDCE5D8)
-    val Divider = Color(0xFFEBF1E8)
+    val Border = Color(0xFFDDE5DF)
+    val Divider = Color(0xFFE9EEE9)
 
-    val BrandGradient = listOf(Color(0xFFEAF4E7), Color(0xFFD8EAD8))
-    val HeroGradient = listOf(Color(0xFFF5FAF2), Color(0xFFE2EFE1))
+    val BrandGradient = listOf(Color(0xFFE8F4EF), Color(0xFFEAF3FF))
+    val HeroGradient = listOf(Color(0xFFF7FAF4), Color(0xFFE8F4EF))
 }
 
 private val LightColorScheme = lightColorScheme(
@@ -100,7 +109,7 @@ private val GajaTypography = Typography(
         fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 34.sp,
-        letterSpacing = (-0.8).sp,
+        letterSpacing = 0.sp,
         lineHeight = 42.sp,
         color = Color.Unspecified
     ),
@@ -108,7 +117,7 @@ private val GajaTypography = Typography(
         fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 28.sp,
-        letterSpacing = (-0.4).sp,
+        letterSpacing = 0.sp,
         lineHeight = 36.sp,
         color = Color.Unspecified
     ),
@@ -116,7 +125,7 @@ private val GajaTypography = Typography(
         fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp,
-        letterSpacing = (-0.3).sp,
+        letterSpacing = 0.sp,
         lineHeight = 32.sp,
         color = Color.Unspecified
     ),
@@ -124,7 +133,7 @@ private val GajaTypography = Typography(
         fontFamily = GajaFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 20.sp,
-        letterSpacing = (-0.2).sp,
+        letterSpacing = 0.sp,
         lineHeight = 28.sp,
         color = Color.Unspecified
     ),
@@ -132,7 +141,7 @@ private val GajaTypography = Typography(
         fontFamily = GajaFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
-        letterSpacing = (-0.1).sp,
+        letterSpacing = 0.sp,
         lineHeight = 27.sp,
         color = Color.Unspecified
     ),
@@ -140,7 +149,7 @@ private val GajaTypography = Typography(
         fontFamily = GajaFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
-        letterSpacing = (-0.1).sp,
+        letterSpacing = 0.sp,
         lineHeight = 26.sp,
         color = Color.Unspecified
     ),

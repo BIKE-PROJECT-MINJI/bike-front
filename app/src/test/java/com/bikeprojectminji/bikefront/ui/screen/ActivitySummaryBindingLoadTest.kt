@@ -205,6 +205,10 @@ private class FakeAuthLoginGateway(
         throw UnsupportedOperationException("not used in this test")
     }
 
+    override fun kakaoLogin(kakaoAccessToken: String, callback: AuthLoginGateway.Callback) {
+        throw UnsupportedOperationException("not used in this test")
+    }
+
     override fun refresh(refreshToken: String, callback: AuthLoginGateway.Callback) {
         refreshRequests += refreshToken
         callback.onSuccess(refreshResult)

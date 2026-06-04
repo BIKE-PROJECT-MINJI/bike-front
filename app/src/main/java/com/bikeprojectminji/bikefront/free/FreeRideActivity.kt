@@ -747,7 +747,7 @@ fun PrimaryRideMetric(
                 style = TextStyle(
                     fontSize = 50.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = (-2).sp,
+                    letterSpacing = 0.sp,
                     color = Color.White,
                     shadow = Shadow(
                         color = GajaColors.Carbon.copy(alpha = 0.74f),

@@ -3,6 +3,7 @@ package com.bikeprojectminji.bikefront.ui.screen
 import android.util.Log
 
 import android.content.Context
+import com.bikeprojectminji.bikefront.BuildConfig
 import com.bikeprojectminji.bikefront.auth.AuthSessionStore
 import com.bikeprojectminji.bikefront.config.AppConfig
 import com.bikeprojectminji.bikefront.course.RecordedCourseItem
@@ -54,7 +55,7 @@ class CoursesRepository(
             connection.setRequestProperty("Accept", "application/json")
 
             val responseCode = connection.responseCode
-            Log.d("CoursesRepository", "fetchAllCourses responseCode=$responseCode url=${AppConfig.API_BASE_URL}/api/v1/courses$query")
+            debugLog("fetchAllCourses responseCode=$responseCode")
             val inputStream = if (responseCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
                 connection.errorStream
             } else {
@@ -62,21 +63,19 @@ class CoursesRepository(
             } ?: error("빈 응답을 받았습니다.")
 
             val body = readBody(inputStream)
-            Log.d("CoursesRepository", "fetchAllCourses body=$body")
+            debugLog("fetchAllCourses bodyLength=${body.length}")
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 error("전체 코스를 불러오지 못했습니다.")
             }
 
             val data = JSONObject(body).optJSONObject("data")
                 ?: error("전체 코스 응답 형식이 올바르지 않습니다.")
-            Log.d("CoursesRepository", "fetchAllCourses data=$data")
             val itemsJson = data.optJSONArray("items")
-            Log.d("CoursesRepository", "fetchAllCourses itemsLength=${itemsJson?.length() ?: -1}")
+            debugLog("fetchAllCourses itemsLength=${itemsJson?.length() ?: -1}")
             val items = buildList {
                 if (itemsJson != null) {
                     for (i in 0 until itemsJson.length()) {
                         val item = itemsJson.optJSONObject(i) ?: continue
-                        Log.d("CoursesRepository", "fetchAllCourses item[$i]=$item")
                         add(
                             CourseCardUiModel(
                                 id = item.optLong("id"),
@@ -89,9 +88,9 @@ class CoursesRepository(
                     }
                 }
             }
-            Log.d("CoursesRepository", "fetchAllCourses mappedItems=${items.size}")
+            debugLog("fetchAllCourses mappedItems=${items.size}")
             val mergedItems = mergeRecordedCourses(items)
-            Log.d("CoursesRepository", "fetchAllCourses mergedItems=${mergedItems.size}")
+            debugLog("fetchAllCourses mergedItems=${mergedItems.size}")
 
             CoursesPageUiModel(
                 items = mergedItems,
@@ -152,6 +151,12 @@ class CoursesRepository(
 
     private fun mergeRecordedCourses(items: List<CourseCardUiModel>): List<CourseCardUiModel> {
         return mergeRecordedCoursesWithCanonicalItems(items, recordedCourseStore.load())
+    }
+
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG) {
+            Log.d("CoursesRepository", message)
+        }
     }
 
     private fun applyAuthorization(connection: HttpURLConnection) {

@@ -44,6 +44,9 @@ sealed class ProfileState {
     data object Loading : ProfileState()
     data class Loaded(
         val displayName: String,
+        val email: String,
+        val userId: Long,
+        val loginProvider: String,
         val activitySummary: AuthLoginGateway.ActivitySummaryResult? = null,
         val summaryErrorMessage: String? = null,
     ) : ProfileState()
@@ -84,10 +87,16 @@ fun MyInfoScreen(
 
     fun loadProfileState() {
         val displayName = authSessionStore.displayName.takeIf { it.isNotBlank() } ?: "라이더"
+        val email = authSessionStore.email
+        val userId = authSessionStore.userId
+        val loginProvider = authSessionStore.loginProvider
         requestMyInfoActivitySummary(authSessionStore, activitySummaryGateway) { result ->
             profileState = when (result) {
                 is ActivitySummaryLoadResult.Success -> ProfileState.Loaded(
                     displayName = displayName,
+                    email = email,
+                    userId = userId,
+                    loginProvider = loginProvider,
                     activitySummary = result.summary,
                 )
 
@@ -95,6 +104,9 @@ fun MyInfoScreen(
 
                 is ActivitySummaryLoadResult.Failure -> ProfileState.Loaded(
                     displayName = displayName,
+                    email = email,
+                    userId = userId,
+                    loginProvider = loginProvider,
                     activitySummary = null,
                     summaryErrorMessage = result.message,
                 )
@@ -216,7 +228,11 @@ private fun ProfileContent(
                     }
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(state.displayName, style = MaterialTheme.typography.titleLarge, color = GajaColors.TextPrimary, fontWeight = FontWeight.Bold)
-                        Text("내 라이딩 요약", style = MaterialTheme.typography.bodySmall, color = GajaColors.TextSecondary)
+                        Text(
+                            state.accountSummaryText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = GajaColors.TextSecondary,
+                        )
                     }
                     GajaStatusBadge(text = "이용 중")
                 }
@@ -229,6 +245,9 @@ private fun ProfileContent(
                     GajaMetricCard(label = "라이드", value = state.totalRides, modifier = Modifier.weight(1f))
                     GajaMetricCard(label = "속도", value = state.avgSpeed, modifier = Modifier.weight(1f))
                 }
+                AccountInfoRow("로그인 방식", state.loginProviderLabel)
+                AccountInfoRow("계정 이메일", state.email.ifBlank { "카카오에서 제공되지 않음" })
+                AccountInfoRow("사용자 ID", if (state.userId > 0L) state.userId.toString() else "확인 전")
             }
         }
 
@@ -284,6 +303,28 @@ private fun ProfileContent(
         SectionHeader(title = "계정")
         GajaPrimaryButton("프로필 수정", onClick = onOpenProfile)
         SecondaryActionButton("로그아웃", onClick = { /* TODO */ })
+    }
+}
+
+private val ProfileState.Loaded.loginProviderLabel: String
+    get() = when (loginProvider) {
+        "kakao" -> "카카오"
+        "email" -> "이메일"
+        else -> "확인 전"
+    }
+
+private val ProfileState.Loaded.accountSummaryText: String
+    get() = "${loginProviderLabel} 계정 · ${email.ifBlank { "이메일 미제공" }}"
+
+@Composable
+private fun AccountInfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = GajaColors.TextSecondary)
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = GajaColors.TextPrimary)
     }
 }
 

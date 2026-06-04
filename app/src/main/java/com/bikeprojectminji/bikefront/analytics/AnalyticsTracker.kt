@@ -20,7 +20,7 @@ class AnalyticsTracker(context: Context) {
     fun track(eventName: String, screenName: String, properties: Map<String, Any?> = emptyMap()) {
         val token = authSessionStore.accessToken
         if (token.isBlank()) {
-            Log.d("AnalyticsTracker", "skip event=$eventName screen=$screenName reason=no_token")
+            debugLog("skip event=$eventName screen=$screenName reason=no_token")
             return
         }
         val payload = JSONObject().apply {
@@ -53,14 +53,26 @@ class AnalyticsTracker(context: Context) {
                     connection.setRequestProperty("Authorization", "Bearer $token")
                     connection.outputStream.use { it.write(payload.toString().toByteArray()) }
                     val responseCode = connection.responseCode
-                    Log.d("AnalyticsTracker", "sent event=$eventName screen=$screenName responseCode=$responseCode")
+                    debugLog("sent event=$eventName screen=$screenName responseCode=$responseCode")
                     responseCode
                 } finally {
                     connection.disconnect()
                 }
             }.onFailure {
-                Log.e("AnalyticsTracker", "event send failed event=$eventName screen=$screenName", it)
+                debugError("event send failed event=$eventName screen=$screenName", it)
             }
+        }
+    }
+
+    private fun debugLog(message: String) {
+        if (BuildConfig.DEBUG) {
+            Log.d("AnalyticsTracker", message)
+        }
+    }
+
+    private fun debugError(message: String, throwable: Throwable) {
+        if (BuildConfig.DEBUG) {
+            Log.e("AnalyticsTracker", message, throwable)
         }
     }
 

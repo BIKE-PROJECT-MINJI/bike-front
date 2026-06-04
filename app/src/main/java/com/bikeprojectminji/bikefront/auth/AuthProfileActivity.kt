@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -44,6 +45,9 @@ import com.bikeprojectminji.bikefront.ui.screen.SectionHeader
 import com.bikeprojectminji.bikefront.ui.theme.GajaColors
 import com.bikeprojectminji.bikefront.ui.theme.GajaSpacing
 import com.bikeprojectminji.bikefront.ui.theme.GajaTheme
+import com.bikeprojectminji.bikefront.R
+import com.bikeprojectminji.bikefront.curator.CuratorOnboardingActivity
+import com.bikeprojectminji.bikefront.curator.CuratorTravelPreferenceStore
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -84,6 +88,9 @@ private data class AuthProfileSessionSnapshot(
     val refreshExpired: Boolean,
     val hasUsableAccessToken: Boolean,
     val displayName: String,
+    val email: String,
+    val userId: Long,
+    val loginProvider: String,
     val profileImageUrl: String,
     val accessExpiryText: String,
     val refreshExpiryText: String,
@@ -97,8 +104,11 @@ private enum class AuthMode {
 @Composable
 fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: () -> Unit) {
     val context = LocalContext.current
+    val activity = context as? Activity
     val authSessionStore = remember { AuthSessionStore(context) }
     val authLoginGateway = remember { HttpAuthLoginGateway() }
+    val kakaoAccessTokenGateway = remember { KakaoSdkAccessTokenGateway() }
+    val curatorPreferenceStore = remember { CuratorTravelPreferenceStore(context) }
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -123,14 +133,21 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
         sessionSnapshot = readAuthProfileSessionSnapshot(authSessionStore)
     }
 
-    fun completeSession(loginResult: AuthLoginGateway.LoginResult, successMessage: String, returnOnSuccess: Boolean, fallbackProfileImageUrl: String) {
+    fun completeSession(
+        loginResult: AuthLoginGateway.LoginResult,
+        successMessage: String,
+        returnOnSuccess: Boolean,
+        fallbackProfileImageUrl: String,
+        loginProvider: String,
+    ) {
         authLoginGateway.getMyProfile(loginResult.accessToken, object : AuthLoginGateway.ProfileCallback {
             override fun onSuccess(result: AuthLoginGateway.ProfileResult) {
                 authSessionStore.saveSession(
                     AuthSessionFactory.create(
                         loginResult,
-                        result.displayName.ifBlank { loginResult.displayName },
-                        result.profileImageUrl.ifBlank { fallbackProfileImageUrl },
+                        result,
+                        loginProvider,
+                        fallbackProfileImageUrl,
                         System.currentTimeMillis(),
                     )
                 )
@@ -139,6 +156,8 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
                 helperMessage = successMessage
                 if (returnOnSuccess) {
                     onSaved()
+                } else if (!curatorPreferenceStore.isCompleted()) {
+                    context.startActivity(CuratorOnboardingActivity.createIntent(context))
                 }
             }
 
@@ -146,7 +165,9 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
                 authSessionStore.saveSession(
                     AuthSessionFactory.create(
                         loginResult,
+                        loginResult.displayName,
                         fallbackProfileImageUrl,
+                        loginProvider,
                         System.currentTimeMillis(),
                     )
                 )
@@ -155,6 +176,8 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
                 helperMessage = if (message.isBlank()) successMessage else "$successMessage 프로필 동기화는 다음에 다시 시도합니다."
                 if (returnOnSuccess) {
                     onSaved()
+                } else if (!curatorPreferenceStore.isCompleted()) {
+                    context.startActivity(CuratorOnboardingActivity.createIntent(context))
                 }
             }
         })
@@ -174,7 +197,7 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
         authLoginGateway.refresh(refreshToken, object : AuthLoginGateway.Callback {
             override fun onSuccess(result: AuthLoginGateway.LoginResult) {
                 val fallbackProfileImageUrl = authSessionStore.profileImageUrl
-                completeSession(result, "세션이 갱신되었습니다.", returnOnSuccess, fallbackProfileImageUrl)
+                completeSession(result, "세션이 갱신되었습니다.", returnOnSuccess, fallbackProfileImageUrl, authSessionStore.loginProvider.ifBlank { "email" })
             }
 
             override fun onFailure(message: String) {
@@ -198,12 +221,46 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
         helperMessage = "로그인 중입니다."
         authLoginGateway.login(safeEmail, safePassword, object : AuthLoginGateway.Callback {
             override fun onSuccess(result: AuthLoginGateway.LoginResult) {
-                completeSession(result, "로그인되었습니다.", returnAfterSave, authSessionStore.profileImageUrl)
+                completeSession(result, "로그인되었습니다.", returnAfterSave, authSessionStore.profileImageUrl, "email")
             }
 
             override fun onFailure(message: String) {
                 inFlight = false
                 helperMessage = message
+            }
+        })
+    }
+
+    fun requestKakaoLogin() {
+        if (activity == null) {
+            helperMessage = "카카오 로그인을 시작할 수 없습니다."
+            return
+        }
+        if (context.getString(R.string.kakao_native_app_key).isBlank()) {
+            helperMessage = "카카오 네이티브 앱 키를 설정하면 카카오 로그인을 사용할 수 있습니다."
+            return
+        }
+
+        inFlight = true
+        helperMessage = "카카오 계정으로 확인하는 중입니다."
+        kakaoAccessTokenGateway.requestAccessToken(activity, object : KakaoAccessTokenGateway.Callback {
+            override fun onSuccess(accessToken: String) {
+                authLoginGateway.kakaoLogin(accessToken, object : AuthLoginGateway.Callback {
+                    override fun onSuccess(result: AuthLoginGateway.LoginResult) {
+                        completeSession(result, "카카오 로그인되었습니다.", returnAfterSave, authSessionStore.profileImageUrl, "kakao")
+                    }
+
+                    override fun onFailure(message: String) {
+                        inFlight = false
+                        helperMessage = message
+                    }
+                })
+            }
+
+            override fun onFailure(message: String) {
+                inFlight = false
+                helperMessage = message
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         })
     }
@@ -229,7 +286,7 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
         helperMessage = "회원가입 중입니다."
         authLoginGateway.register(safeEmail, safePassword, safeDisplayName, object : AuthLoginGateway.Callback {
             override fun onSuccess(result: AuthLoginGateway.LoginResult) {
-                completeSession(result, "회원가입이 완료되었습니다.", returnAfterSave, authSessionStore.profileImageUrl)
+                completeSession(result, "회원가입이 완료되었습니다.", returnAfterSave, authSessionStore.profileImageUrl, "email")
             }
 
             override fun onFailure(message: String) {
@@ -287,6 +344,9 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
                             onFinish()
                         }
                     },
+                    onOpenPreferences = {
+                        context.startActivity(CuratorOnboardingActivity.createIntent(context))
+                    },
                     onClose = onFinish,
                 )
             } else {
@@ -316,6 +376,7 @@ fun AuthProfileScreen(returnAfterSave: Boolean, onFinish: () -> Unit, onSaved: (
                     onEmailChange = { email = it },
                     onPasswordChange = { password = it },
                     onDisplayNameChange = { displayName = it },
+                    onKakaoLogin = { requestKakaoLogin() },
                     onSubmit = {
                         if (authMode == AuthMode.LOGIN) {
                             requestLogin()
@@ -343,6 +404,7 @@ private fun LoggedOutLoginContent(
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onDisplayNameChange: (String) -> Unit,
+    onKakaoLogin: () -> Unit,
     onSubmit: () -> Unit,
     onClose: () -> Unit,
 ) {
@@ -382,6 +444,28 @@ private fun LoggedOutLoginContent(
             }
         },
     )
+
+    GajaPrimaryButton(
+        text = if (inFlight) "확인 중..." else "카카오로 계속하기",
+        onClick = onKakaoLogin,
+        enabled = !inFlight,
+    )
+
+    GajaSectionCard(
+        containerColor = GajaColors.SurfaceMuted,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(GajaSpacing.Medium),
+    ) {
+        Text(
+            text = "개인정보 처리방침, 이용약관, 위치기반서비스 고지에 동의한 뒤 카카오 계정으로 시작합니다.",
+            style = MaterialTheme.typography.bodySmall,
+            color = GajaColors.TextSecondary,
+        )
+        Text(
+            text = "${KakaoLoginPolicyVersions.PRIVACY_POLICY_VERSION} · ${KakaoLoginPolicyVersions.TERMS_VERSION} · ${KakaoLoginPolicyVersions.LOCATION_TERMS_VERSION}",
+            style = MaterialTheme.typography.labelMedium,
+            color = GajaColors.TextPrimary,
+        )
+    }
 
     Row(horizontalArrangement = Arrangement.spacedBy(GajaSpacing.Small)) {
         FilterChip(
@@ -466,6 +550,7 @@ private fun SignedInSessionContent(
     inFlight: Boolean,
     onRefresh: () -> Unit,
     onLogout: () -> Unit,
+    onOpenPreferences: () -> Unit,
     onClose: () -> Unit,
 ) {
     SectionHeader(
@@ -487,6 +572,9 @@ private fun SignedInSessionContent(
         }
 
         SessionStatusRow("세션 상태", if (sessionSnapshot.hasUsableAccessToken) "바로 이용 가능" else "새로 확인 필요")
+        SessionStatusRow("로그인 방식", sessionSnapshot.loginProviderLabel)
+        SessionStatusRow("계정 이메일", sessionSnapshot.email.ifBlank { "카카오에서 제공되지 않음" })
+        SessionStatusRow("사용자 ID", if (sessionSnapshot.userId > 0L) sessionSnapshot.userId.toString() else "확인 전")
         SessionStatusRow("프로필 이미지", if (sessionSnapshot.profileImageUrl.isBlank()) "아직 없음" else "연결됨")
     }
 
@@ -496,6 +584,7 @@ private fun SignedInSessionContent(
         enabled = !inFlight,
     )
     SecondaryActionButton(text = "로그아웃", onClick = onLogout)
+    SecondaryActionButton(text = "여행 취향 설정", onClick = onOpenPreferences)
     SecondaryActionButton(text = "닫기", onClick = onClose)
 }
 
@@ -532,11 +621,21 @@ private fun readAuthProfileSessionSnapshot(store: AuthSessionStore): AuthProfile
         refreshExpired = state.isRefreshExpired,
         hasUsableAccessToken = state.isHasUsableAccessToken,
         displayName = store.displayName.ifBlank { "bikeoasis" },
+        email = store.email,
+        userId = store.userId,
+        loginProvider = store.loginProvider,
         profileImageUrl = store.profileImageUrl,
         accessExpiryText = formatExpiry(session?.accessTokenExpiresAtEpochMillis ?: 0L),
         refreshExpiryText = formatExpiry(session?.refreshTokenExpiresAtEpochMillis ?: 0L),
     )
 }
+
+private val AuthProfileSessionSnapshot.loginProviderLabel: String
+    get() = when (loginProvider) {
+        "kakao" -> "카카오"
+        "email" -> "이메일"
+        else -> "확인 전"
+    }
 
 private fun formatExpiry(epochMillis: Long): String {
     if (epochMillis <= 0L) {

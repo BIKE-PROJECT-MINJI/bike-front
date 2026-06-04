@@ -110,6 +110,7 @@ cmd.exe /c gradlew.bat test
 - 현재 배포 backend 기준 base URL: `https://api.gajabike.shop`
 - release URL은 환경에 따라 gradle property로 덮어씁니다.
 - 필요 시 gradle property로 덮어쓸 수 있습니다.
+- release URL은 HTTPS만 허용합니다. `http://` 값을 넣으면 빌드 단계에서 실패합니다.
 
 예시:
 
@@ -117,6 +118,12 @@ cmd.exe /c gradlew.bat test
 ./gradlew.bat assembleDebug -PdebugApiBaseUrl=https://staging.example.com
 ./gradlew.bat assembleRelease -PreleaseApiBaseUrl=https://api.example.com
 ```
+
+## Release signing
+
+- `signing.local.properties`와 `keystore/`는 로컬/CI 비밀값 영역이며 Git에 넣지 않습니다.
+- 필요한 키 이름은 `signing.local.properties.example`을 복사해 채우되, 실제 비밀번호와 keystore는 로컬 또는 CI secret으로만 관리합니다.
+- GitHub release workflow는 `BIKE_FRONT_RELEASE_KEYSTORE_BASE64`, `BIKE_FRONT_RELEASE_STORE_PASSWORD`, `BIKE_FRONT_RELEASE_KEY_ALIAS`, `BIKE_FRONT_RELEASE_KEY_PASSWORD` secret이 모두 있을 때 signed APK를 만들고, 없으면 unsigned APK를 명시적으로 배포 산출물로 선택합니다.
 
 ## Device APK note
 

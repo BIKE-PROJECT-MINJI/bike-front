@@ -79,7 +79,7 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
                 text = "gaja",
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontSize = 44.sp,
-                    letterSpacing = (-1.2).sp,
+                    letterSpacing = 0.sp,
                     fontWeight = FontWeight.Bold,
                     color = GajaColors.TextPrimary
                 )

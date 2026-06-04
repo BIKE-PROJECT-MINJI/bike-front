@@ -1,0 +1,4 @@
+storeFile=keystore/release-local.jks
+storePassword=REPLACE_WITH_LOCAL_OR_CI_SECRET
+keyAlias=bike-release
+keyPassword=REPLACE_WITH_LOCAL_OR_CI_SECRET

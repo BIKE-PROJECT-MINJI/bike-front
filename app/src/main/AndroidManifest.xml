@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
+        android:name=".GajaApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -13,10 +14,27 @@
         android:theme="@style/Theme.BikeFront"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
         <activity
+            android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="oauth"
+                    android:scheme="kakao${kakaoNativeAppKey}" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".free.FreeRideActivity"
             android:exported="false" />
         <activity
             android:name=".auth.AuthProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".curator.CuratorOnboardingActivity"
             android:exported="false" />
         <activity
             android:name=".course.CourseEditorActivity"

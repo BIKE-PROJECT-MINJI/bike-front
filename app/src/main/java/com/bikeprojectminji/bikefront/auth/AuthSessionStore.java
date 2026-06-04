@@ -7,6 +7,9 @@ public class AuthSessionStore {
 
     private static final String PREF_NAME = "auth_session";
     private static final String KEY_DISPLAY_NAME = "display_name";
+    private static final String KEY_EMAIL = "email";
+    private static final String KEY_USER_ID = "user_id";
+    private static final String KEY_LOGIN_PROVIDER = "login_provider";
     private static final String KEY_PROFILE_IMAGE_URL = "profile_image_url";
     private static final String KEY_ACCESS_TOKEN = "access_token";
     private static final String KEY_REFRESH_TOKEN = "refresh_token";
@@ -44,6 +47,18 @@ public class AuthSessionStore {
         return sharedPreferences.getString(KEY_PROFILE_IMAGE_URL, "") == null ? "" : sharedPreferences.getString(KEY_PROFILE_IMAGE_URL, "");
     }
 
+    public String getEmail() {
+        return sharedPreferences.getString(KEY_EMAIL, "") == null ? "" : sharedPreferences.getString(KEY_EMAIL, "");
+    }
+
+    public long getUserId() {
+        return sharedPreferences.getLong(KEY_USER_ID, -1L);
+    }
+
+    public String getLoginProvider() {
+        return sharedPreferences.getString(KEY_LOGIN_PROVIDER, "") == null ? "" : sharedPreferences.getString(KEY_LOGIN_PROVIDER, "");
+    }
+
     public String getAccessToken() {
         AuthSession session = getStoredSession();
         return resolveState().isHasUsableAccessToken() && session != null ? session.getAccessToken() : "";
@@ -64,6 +79,9 @@ public class AuthSessionStore {
 
     public AuthSession getStoredSession() {
         String displayName = getDisplayName();
+        String email = getEmail();
+        long userId = getUserId();
+        String loginProvider = getLoginProvider();
         String profileImageUrl = getProfileImageUrl();
         String accessToken = valueOrEmpty(sharedPreferences.getString(KEY_ACCESS_TOKEN, ""));
         String refreshToken = valueOrEmpty(sharedPreferences.getString(KEY_REFRESH_TOKEN, ""));
@@ -72,12 +90,15 @@ public class AuthSessionStore {
         if (displayName.isBlank() && profileImageUrl.isBlank() && accessToken.isBlank() && refreshToken.isBlank() && accessExpiry == 0L && refreshExpiry == 0L) {
             return null;
         }
-        return new AuthSession(displayName, profileImageUrl, accessToken, refreshToken, accessExpiry, refreshExpiry);
+        return new AuthSession(displayName, email, userId, loginProvider, profileImageUrl, accessToken, refreshToken, accessExpiry, refreshExpiry);
     }
 
     public void saveSession(AuthSession session) {
         sharedPreferences.edit()
                 .putString(KEY_DISPLAY_NAME, session.getDisplayName())
+                .putString(KEY_EMAIL, session.getEmail())
+                .putLong(KEY_USER_ID, session.getUserId())
+                .putString(KEY_LOGIN_PROVIDER, session.getLoginProvider())
                 .putString(KEY_PROFILE_IMAGE_URL, session.getProfileImageUrl())
                 .putString(KEY_ACCESS_TOKEN, session.getAccessToken())
                 .putString(KEY_REFRESH_TOKEN, session.getRefreshToken())

@@ -11,6 +11,9 @@ class MyInfoActivitySummaryStateTest {
     fun `profile content binds lifetime stats from shared backend dto`() {
         val state = ProfileState.Loaded(
             displayName = "bikeoasis",
+            email = "bikeoasis@example.com",
+            userId = 1L,
+            loginProvider = "email",
             activitySummary = sampleSummary(
                 totalDistanceKm = 1248.3,
                 totalRides = 42,
@@ -29,6 +32,9 @@ class MyInfoActivitySummaryStateTest {
     fun `empty week still preserves overall stats from same source of truth`() {
         val state = ProfileState.Loaded(
             displayName = "bikeoasis",
+            email = "bikeoasis@example.com",
+            userId = 1L,
+            loginProvider = "email",
             activitySummary = sampleSummary(
                 distanceKm = 0.0,
                 rideCount = 0,

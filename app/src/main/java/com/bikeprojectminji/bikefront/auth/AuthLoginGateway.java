@@ -6,6 +6,8 @@ public interface AuthLoginGateway {
 
     void login(String email, String password, Callback callback);
 
+    void kakaoLogin(String kakaoAccessToken, Callback callback);
+
     void refresh(String refreshToken, Callback callback);
 
     void getMyProfile(String accessToken, ProfileCallback callback);
